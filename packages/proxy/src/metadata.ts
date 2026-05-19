@@ -6,7 +6,7 @@ import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const CONVERSATIONS_DIR = join(
+export const CONVERSATIONS_DIR = join(
   homedir(),
   ".gemini",
   "antigravity",

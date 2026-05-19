@@ -13,7 +13,9 @@ import {
   rpcForConversation,
   getStepCount,
 } from "../routing.js";
-import { getMetadata, scanDiskConversations } from "../metadata.js";
+import { getMetadata, scanDiskConversations, CONVERSATIONS_DIR } from "../metadata.js";
+import { stat } from "node:fs/promises";
+import { join } from "node:path";
 import { handleRPCError } from "../errors.js";
 import { runConversationMutation } from "../conversation-mutations.js";
 import {
@@ -28,6 +30,50 @@ import { conversationSignals } from "../signals.js";
 
 // ── Background warm-up for disk-only conversations ──
 
+interface CachedSummary {
+  summary: string;
+  stepCount: number;
+  status: string;
+  lastModifiedTime: string;
+  createdTime: string;
+  trajectoryId: string;
+  workspaces: any[];
+  mtime: string;
+}
+
+export const diskSummaryCache = new Map<string, CachedSummary>();
+
+function extractSummaryFromTrajectory(trajectory: any): string {
+  if (!trajectory) return "";
+
+  if (Array.isArray(trajectory.steps)) {
+    // Search backwards for the latest checkpoint
+    for (let i = trajectory.steps.length - 1; i >= 0; i--) {
+      const step = trajectory.steps[i];
+      if (step.type === "CORTEX_STEP_TYPE_CHECKPOINT" && step.checkpoint?.userIntent) {
+        const lines = step.checkpoint.userIntent.split("\n");
+        const firstLine = lines[0]?.trim();
+        if (firstLine) return firstLine;
+      }
+    }
+
+    // Fallback to first user input
+    for (const step of trajectory.steps) {
+      if (step.type === "CORTEX_STEP_TYPE_USER_INPUT" && step.userInput) {
+        const text = step.userInput.userResponse || step.userInput.items?.[0]?.text;
+        if (text) {
+          const trimmed = text.trim().split("\n")[0]?.trim();
+          if (trimmed) {
+            return trimmed.length > 60 ? trimmed.slice(0, 57) + "..." : trimmed;
+          }
+        }
+      }
+    }
+  }
+
+  return "";
+}
+
 /** Warm-up cache: cascadeId → timestamp when the warm-up was initiated. */
 const warmedAt = new Map<string, number>();
 /** How long a warm-up result is considered valid (ms). After this, the
@@ -37,31 +83,22 @@ const warmedAt = new Map<string, number>();
 const WARM_TTL_MS = 60_000;
 
 /**
- * Fire-and-forget: touch each disk-only conversation on every LS so the LS
- * loads its .pb file into memory. On the *next* GetAllCascadeTrajectories call
- * the LS will return it with proper workspace metadata and summary.
- *
- * Uses GetCascadeTrajectorySteps with a huge offset so the LS loads the .pb
- * but returns only `{steps:[]}` (~28 bytes) instead of the full trajectory.
- *
- * HACK: There is no dedicated "load conversation" RPC on the LS. We rely on
- * the side-effect of GetCascadeTrajectorySteps loading the .pb from disk.
- * If the LS changes its boundary-check or authorization behavior, this may
- * silently stop working — watch for "warm-up: failed" log lines.
- *
- * Concurrency is capped to avoid flooding the LS with reads.
+ * Fire-and-forget: query each disk-only conversation via GetCascadeTrajectory
+ * on every LS so that:
+ * 1. The LS loads its .pb file into memory.
+ * 2. We retrieve the metadata/steps and populate diskSummaryCache so the UI shows it correctly immediately.
  */
 function warmUpDiskConversations(
-  ids: string[],
+  diskOnly: { id: string; mtime: string }[],
   instances: LSInstance[],
 ): void {
   const now = Date.now();
-  const pending = ids.filter((id) => {
-    const t = warmedAt.get(id);
+  const pending = diskOnly.filter((d) => {
+    const t = warmedAt.get(d.id);
     return !t || now - t > WARM_TTL_MS;
   });
   if (pending.length === 0) return;
-  for (const id of pending) warmedAt.set(id, now);
+  for (const d of pending) warmedAt.set(d.id, now);
 
   console.log(
     `[warm-up] loading ${pending.length} disk-only conversation(s) across ${instances.length} LS(es)`,
@@ -76,16 +113,59 @@ function warmUpDiskConversations(
     for (let i = 0; i < pending.length; i += CONCURRENCY) {
       const batch = pending.slice(i, i + CONCURRENCY);
       await Promise.allSettled(
-        batch.map(async (cascadeId) => {
+        batch.map(async (d) => {
+          const cascadeId = d.id;
+          const mtime = d.mtime;
+
           for (const inst of instances) {
             try {
-              await rpc.call(
-                "GetCascadeTrajectorySteps",
-                { cascadeId, stepOffset: 999999 },
+              const data = await rpc.call<{
+                trajectory?: {
+                  trajectoryId?: string;
+                  steps?: any[];
+                  metadata?: {
+                    workspaces?: any[];
+                    createdAt?: string;
+                  };
+                };
+                status?: string;
+                numTotalSteps?: number;
+              }>(
+                "GetCascadeTrajectory",
+                { cascadeId },
                 inst,
               );
-              loaded++;
-              return;
+
+              if (data && data.trajectory) {
+                const trajectory = data.trajectory;
+                const summary = extractSummaryFromTrajectory(trajectory) || (cascadeId.slice(0, 8) + "…");
+                const stepCount = data.numTotalSteps ?? (trajectory.steps?.length ?? 0);
+                const status = data.status || "CASCADE_RUN_STATUS_IDLE";
+                const createdTime = trajectory.metadata?.createdAt || mtime;
+                const lastModifiedTime = mtime;
+                const trajectoryId = trajectory.trajectoryId || "";
+                const workspaces = trajectory.metadata?.workspaces || [];
+
+                diskSummaryCache.set(cascadeId, {
+                  summary,
+                  stepCount,
+                  status,
+                  lastModifiedTime,
+                  createdTime,
+                  trajectoryId,
+                  workspaces,
+                  mtime,
+                });
+
+                // Learn affinity if workspace metadata is available
+                const wsUri = workspaces?.[0]?.workspaceFolderAbsoluteUri;
+                if (wsUri) {
+                  conversationAffinity.set(cascadeId, uriToWorkspaceId(wsUri));
+                }
+
+                loaded++;
+                return;
+              }
             } catch {
               // This LS doesn't have it — try next
             }
@@ -181,41 +261,52 @@ export function registerConversationRoutes(app: Hono): void {
       // Also scan disk for all .pb files
       const diskIds = await scanDiskConversations();
 
-      // Merge: disk-only sessions get minimal placeholder metadata.
+      // Merge: disk-only sessions get cached metadata or minimal placeholder metadata.
       // Actual workspace info will be resolved by the background warm-up below.
-      const diskOnlyIds: string[] = [];
+      const diskOnly: { id: string; mtime: string }[] = [];
       for (const diskId of diskIds) {
         if (!merged[diskId.id]) {
-          let injectedWorkspaces: { workspaceFolderAbsoluteUri: string }[] = [];
-          const wsId = conversationAffinity.get(diskId.id);
-          if (wsId && wsId.startsWith("file_")) {
-            const uri = wsId.replace(/^file_/, "file:///").replace(/_/g, "/");
-            injectedWorkspaces = [{ workspaceFolderAbsoluteUri: uri }];
+          const cached = diskSummaryCache.get(diskId.id);
+          if (cached && cached.mtime === diskId.mtime) {
+            merged[diskId.id] = {
+              summary: cached.summary,
+              stepCount: cached.stepCount,
+              status: cached.status,
+              lastModifiedTime: cached.lastModifiedTime,
+              createdTime: cached.createdTime,
+              trajectoryId: cached.trajectoryId,
+              workspaces: cached.workspaces,
+              _diskOnly: true,
+            };
+          } else {
+            let injectedWorkspaces: { workspaceFolderAbsoluteUri: string }[] = [];
+            const wsId = conversationAffinity.get(diskId.id);
+            if (wsId && wsId.startsWith("file_")) {
+              const uri = wsId.replace(/^file_/, "file:///").replace(/_/g, "/");
+              injectedWorkspaces = [{ workspaceFolderAbsoluteUri: uri }];
+            }
+
+            diskOnly.push(diskId);
+
+            merged[diskId.id] = {
+              summary: diskId.id.slice(0, 8) + "…",
+              stepCount: 0,
+              status: "CASCADE_RUN_STATUS_UNLOADED",
+              lastModifiedTime: diskId.mtime,
+              createdTime: diskId.mtime,
+              trajectoryId: "",
+              workspaces: injectedWorkspaces,
+              _diskOnly: true,
+            };
           }
-
-          // Always queue for warm-up, even with cached affinity.
-          // Affinity may be stale (LS restarted, conversation fell out of
-          // memory) — warm-up ensures the LS re-loads it from disk.
-          diskOnlyIds.push(diskId.id);
-
-          merged[diskId.id] = {
-            summary: diskId.id.slice(0, 8) + "…",
-            stepCount: 0,
-            status: "CASCADE_RUN_STATUS_UNLOADED",
-            lastModifiedTime: diskId.mtime,
-            createdTime: diskId.mtime,
-            trajectoryId: "",
-            workspaces: injectedWorkspaces,
-            _diskOnly: true,
-          };
         }
       }
 
       // Background warm-up: touch disk-only conversations so each LS loads
       // them from .pb files. Once loaded, GetAllCascadeTrajectories returns
       // them with proper workspace metadata on the next poll cycle.
-      if (diskOnlyIds.length > 0 && instances.length > 0) {
-        warmUpDiskConversations(diskOnlyIds, instances);
+      if (diskOnly.length > 0 && instances.length > 0) {
+        warmUpDiskConversations(diskOnly, instances);
       }
 
       return c.json({ trajectorySummaries: merged });
@@ -227,9 +318,39 @@ export function registerConversationRoutes(app: Hono): void {
   app.get("/api/conversations/:id", async (c) => {
     const id = c.req.param("id");
     try {
-      const data = await rpcForConversation("GetCascadeTrajectory", id, {
+      const data = await rpcForConversation<any>("GetCascadeTrajectory", id, {
         cascadeId: id,
       }, undefined, true);
+
+      // Update cache
+      if (data && data.trajectory) {
+        const trajectory = data.trajectory;
+        const summary = extractSummaryFromTrajectory(trajectory) || (id.slice(0, 8) + "…");
+        const stepCount = data.numTotalSteps ?? (trajectory.steps?.length ?? 0);
+        const status = data.status || "CASCADE_RUN_STATUS_IDLE";
+        const createdTime = trajectory.metadata?.createdAt || new Date().toISOString();
+        const lastModifiedTime = new Date().toISOString();
+        const trajectoryId = trajectory.trajectoryId || "";
+        const workspaces = trajectory.metadata?.workspaces || [];
+
+        let mtime = new Date().toISOString();
+        try {
+          const s = await stat(join(CONVERSATIONS_DIR, `${id}.pb`));
+          mtime = s.mtime.toISOString();
+        } catch {}
+
+        diskSummaryCache.set(id, {
+          summary,
+          stepCount,
+          status,
+          lastModifiedTime,
+          createdTime,
+          trajectoryId,
+          workspaces,
+          mtime,
+        });
+      }
+
       return c.json(data);
     } catch (err) {
       return handleRPCError(c, err);
