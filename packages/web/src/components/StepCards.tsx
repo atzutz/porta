@@ -7,6 +7,7 @@ import {
   IconFile,
   IconFileText,
   IconLock,
+  IconAlertTriangle,
 } from "./Icons";
 import type { TrajectoryStep, FilePermissionRequest } from "../types";
 
@@ -337,6 +338,81 @@ export function CodeActionCard({ step }: CodeActionCardProps) {
               </div>
             ))}
           </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ErrorMessageCardProps {
+  step: TrajectoryStep;
+  onRetry?: (stepIndex: number) => void;
+}
+
+export function ErrorMessageCard({ step, onRetry }: ErrorMessageCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const errMsg = step.errorMessage;
+  if (!errMsg || !errMsg.error) return null;
+
+  const error = errMsg.error;
+  const mainMessage = error.userErrorMessage || error.shortError || error.modelErrorMessage || "An error occurred";
+  const detail = error.modelErrorMessage || error.shortError || "";
+  const fullError = error.fullError || error.details || "";
+
+  const hasDetail = !!detail || !!fullError;
+
+  return (
+    <div className="chat-block step-card error-card cmd-fail">
+      <button
+        className="step-card-header"
+        onClick={() => hasDetail && setExpanded((v) => !v)}
+        title={hasDetail ? "Toggle error details" : undefined}
+        style={{ cursor: hasDetail ? "pointer" : "default" }}
+      >
+        <span className="step-card-icon" style={{ color: "rgb(var(--c-error))" }}>
+          <IconAlertTriangle size={12} />
+        </span>
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+          <span className="error-card-title" style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+            {mainMessage}
+          </span>
+          {!expanded && detail && detail !== mainMessage && (
+            <span className="error-card-detail" style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {detail}
+            </span>
+          )}
+        </div>
+        {hasDetail && (
+          <span className={`step-card-chevron ${expanded ? "open" : ""}`} style={{ alignSelf: "center" }}>
+            ▾
+          </span>
+        )}
+      </button>
+      {onRetry && (
+        <div className="step-card-actions file-permission-actions">
+          <button
+            className="approve-btn command-action-btn approve"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRetry(step.metadata?.sourceTrajectoryStepInfo?.stepIndex ?? 0);
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      {expanded && (
+        <div className="step-card-output" style={{ background: "var(--bg-primary)", borderTop: "1px solid var(--border-subtle)", padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+          {detail && detail !== mainMessage && (
+            <div style={{ marginBottom: "8px", fontWeight: 600 }}>
+              {detail}
+            </div>
+          )}
+          {fullError && (
+            <div>
+              {fullError}
+            </div>
+          )}
         </div>
       )}
     </div>

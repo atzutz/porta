@@ -89,6 +89,13 @@ function ChatView() {
 
   const activeConv = conversations.find((c) => c.id === activeId);
   const isRunning = activeConv?.summary.status === "CASCADE_RUN_STATUS_RUNNING";
+  const [wsRunning, setWsRunning] = useState(false);
+
+  // Sync wsRunning with isRunning on conversation change
+  useEffect(() => {
+    setWsRunning(isRunning);
+  }, [activeId]);
+
   const connected = !!health && health.languageServers.length > 0;
 
   const {
@@ -98,7 +105,7 @@ function ChatView() {
     stepsRefreshKey,
     hardRefreshKey,
     handleSend: doSend,
-    handleStop,
+    handleStop: doStop,
 
     handleRevert: rawHandleRevert,
     handleDelete,
@@ -116,6 +123,7 @@ function ChatView() {
   // Wire handleRevert to also update draft text
   const handleRevert = useCallback(
     async (stepIndex: number, draftContent?: string) => {
+      setWsRunning(false);
       await rawHandleRevert(stepIndex, draftContent);
       if (draftContent) {
         handleDraftChange(draftContent);
@@ -132,10 +140,16 @@ function ChatView() {
       media?: MediaAttachment[],
       plannerType?: PlannerType,
     ) => {
+      setWsRunning(true);
       doSend(text, model, media, plannerType, true);
     },
     [doSend],
   );
+
+  const handleStop = useCallback(async () => {
+    setWsRunning(false);
+    await doStop();
+  }, [doStop]);
 
   // ── Per-file permission response ──
   const handleFilePermission = useCallback(
@@ -294,6 +308,7 @@ function ChatView() {
             totalStepCount={activeConv?.summary.stepCount}
             isConversationRunning={isRunning}
             onSidebarRefresh={refresh}
+            onWsRunningChange={setWsRunning}
           />
         ) : (
           <div
@@ -390,7 +405,7 @@ function ChatView() {
           <ChatInput
             onSend={handleSend}
             onStop={handleStop}
-            isRunning={isRunning}
+            isRunning={wsRunning}
             disabled={!connected}
             draft={draftText}
             onDraftChange={handleDraftChange}

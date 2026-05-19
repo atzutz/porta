@@ -90,6 +90,17 @@ export interface TrajectoryStep {
   find?: FindData;
   /** File permission request can appear on any tool step */
   filePermissionRequest?: FilePermissionRequest;
+  errorMessage?: {
+    error?: {
+      userErrorMessage?: string;
+      modelErrorMessage?: string;
+      shortError?: string;
+      fullError?: string;
+      errorCode?: number;
+      details?: string;
+    };
+    shouldShowUser?: boolean;
+  };
 }
 
 export interface PlannerResponseData {

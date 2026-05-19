@@ -386,4 +386,23 @@ describe("stepsToMessages", () => {
     expect(msgs[3].role).toBe("assistant");
     expect(msgs).toHaveLength(4);
   });
+
+  // ── Error message ──
+
+  it("converts error message step to system message with step data", () => {
+    const step: TrajectoryStep = {
+      type: "CORTEX_STEP_TYPE_ERROR_MESSAGE",
+      errorMessage: {
+        error: {
+          userErrorMessage: "No capacity",
+          modelErrorMessage: "gemini capacity",
+        },
+      },
+    };
+    const msgs = stepsToMessages([step]);
+    expect(msgs).toHaveLength(1);
+    expect(msgs[0].role).toBe("system");
+    expect(msgs[0].type).toBe("CORTEX_STEP_TYPE_ERROR_MESSAGE");
+    expect(msgs[0].step?.errorMessage?.error?.userErrorMessage).toBe("No capacity");
+  });
 });

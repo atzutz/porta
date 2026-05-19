@@ -21,7 +21,7 @@ export async function getMetadata(
   fileAccessGranted = false,
 ): Promise<Record<string, unknown>> {
   const meta: Record<string, unknown> = {
-    ideName: "porta",
+    ideName: "vscode",
     ideVersion: "0.1.0",
     extensionVersion: "0.1.0",
   };

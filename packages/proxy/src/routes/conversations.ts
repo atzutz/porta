@@ -396,7 +396,13 @@ export function registerConversationRoutes(app: Hono): void {
         {
           ...body,
           metadata,
-          ...(workspaceUri ? { workspaceFolderAbsoluteUri: workspaceUri } : {}),
+          ...(workspaceUri
+            ? {
+                workspaceFolderAbsoluteUri: workspaceUri,
+                workspaceUris: [workspaceUri],
+                workspaces: [{ workspaceFolderAbsoluteUri: workspaceUri }],
+              }
+            : {}),
         },
         targetInstance,
       );

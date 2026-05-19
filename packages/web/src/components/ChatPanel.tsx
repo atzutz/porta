@@ -21,6 +21,7 @@ import {
   CommandCard,
   CodeActionCard,
   FilePermissionCard,
+  ErrorMessageCard,
   getFilePermissionRequest,
 } from "./StepCards";
 import {
@@ -61,6 +62,8 @@ interface Props {
   isConversationRunning?: boolean;
   /** Called when the WS reports the agent went idle — triggers sidebar refresh. */
   onSidebarRefresh?: () => void;
+  /** Called when the WS running status changes. */
+  onWsRunningChange?: (running: boolean) => void;
 }
 
 /** Collapsible thinking/reasoning block */
@@ -120,6 +123,7 @@ function SystemMessage({
   msg,
   onFilePermission,
   onCommandAction,
+  onRevert,
 }: {
   msg: ChatMessage;
   onFilePermission: (
@@ -134,6 +138,7 @@ function SystemMessage({
     stepIndex: number,
     approved: boolean,
   ) => Promise<void>;
+  onRevert?: (stepIndex: number, editText?: string) => void;
 }) {
   const renderedContent = useMemo(
     () => renderMarkdown(msg.content ?? ""),
@@ -167,6 +172,13 @@ function SystemMessage({
       return (
         <div className="message system">
           <CodeActionCard step={msg.step} />
+        </div>
+      );
+    }
+    if (msg.type === "CORTEX_STEP_TYPE_ERROR_MESSAGE") {
+      return (
+        <div className="message system">
+          <ErrorMessageCard step={msg.step} onRetry={onRevert} />
         </div>
       );
     }
@@ -388,10 +400,12 @@ export function ChatPanel({
   totalStepCount,
   isConversationRunning = false,
   onSidebarRefresh,
+  onWsRunningChange,
 }: Props) {
   const {
     steps: rawSteps,
     loading,
+    error,
     refresh,
     hardRefresh,
     hasMore,
@@ -404,6 +418,10 @@ export function ChatPanel({
     onSidebarRefresh,
     isConversationRunning,
   );
+
+  useEffect(() => {
+    onWsRunningChange?.(wsRunning);
+  }, [wsRunning, onWsRunningChange]);
 
   // Soft re-fetch when refreshKey changes (e.g. after send)
   const prevKeyRef = useRef(refreshKey);
@@ -589,6 +607,21 @@ export function ChatPanel({
     );
   }
 
+  if (error) {
+    return (
+      <div className="chat-area">
+        <div className="chat-empty">
+          <div className="chat-empty-icon danger" style={{ color: "var(--danger, #ef4444)" }}>
+            <IconAlertTriangle size={48} />
+          </div>
+          <div className="chat-empty-text">Failed to load conversation</div>
+          <div className="chat-empty-detail" style={{ marginTop: 8, fontSize: "0.85em", color: "var(--text-muted, #6b7280)" }}>{error}</div>
+          <button className="see-all-btn" style={{ marginTop: 16 }} onClick={hardRefresh}>Retry</button>
+        </div>
+      </div>
+    );
+  }
+
   if (messages.length === 0) {
     return (
       <div className="chat-area">
@@ -633,6 +666,7 @@ export function ChatPanel({
                 msg={msg}
                 onFilePermission={onFilePermission}
                 onCommandAction={onCommandAction}
+                onRevert={i === messages.length - 1 ? onRevert : undefined}
               />
             );
           }
