@@ -4,13 +4,6 @@ import { IconPaperclip } from "./Icons";
 import type { MediaAttachment } from "../types";
 import { prepareAttachments } from "../utils/imageAttachments";
 import { DEFAULT_MODEL } from "../constants";
-const ALLOWED_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/svg+xml",
-  "image/webp",
-];
 
 export type PlannerType = "conversational" | "planning";
 
@@ -151,10 +144,6 @@ export function ChatInput({
     (files: FileList | File[]) => {
       const fileArray = Array.from(files);
       for (const file of fileArray) {
-        if (!ALLOWED_TYPES.includes(file.type)) {
-          showFileError(`Unsupported file type: ${file.type || "unknown"}`);
-          continue;
-        }
         const dataUrl = URL.createObjectURL(file);
         setAttachments((prev) => {
           if (prev.length >= 5) return prev; // max 5 attachments
@@ -162,7 +151,7 @@ export function ChatInput({
         });
       }
     },
-    [showFileError],
+    [],
   );
 
   const removeAttachment = useCallback((index: number) => {
@@ -233,21 +222,21 @@ export function ChatInput({
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   };
 
-  // Paste handler for images
+  // Paste handler for files
   const handlePaste = useCallback(
     (e: React.ClipboardEvent) => {
       const items = e.clipboardData.items;
-      const imageFiles: File[] = [];
+      const pastedFiles: File[] = [];
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        if (item.type.startsWith("image/")) {
+        if (item.kind === "file") {
           const file = item.getAsFile();
-          if (file) imageFiles.push(file);
+          if (file) pastedFiles.push(file);
         }
       }
-      if (imageFiles.length > 0) {
+      if (pastedFiles.length > 0) {
         e.preventDefault();
-        addFiles(imageFiles);
+        addFiles(pastedFiles);
       }
     },
     [addFiles],
@@ -301,8 +290,16 @@ export function ChatInput({
       {attachments.length > 0 && (
         <div className="attachment-previews">
           {attachments.map((a, i) => (
-            <div key={a.dataUrl} className="attachment-thumb">
-              <img src={a.dataUrl} alt="attachment" />
+            <div key={a.dataUrl} className="attachment-thumb" title={a.file.name}>
+              {a.file.type.startsWith("image/") ? (
+                <img src={a.dataUrl} alt="attachment" />
+              ) : (
+                <div className="attachment-file-icon">
+                  <span className="attachment-file-ext">
+                    {a.file.name.split(".").pop()?.toUpperCase().slice(0, 4) || "FILE"}
+                  </span>
+                </div>
+              )}
               <button
                 className="attachment-remove"
                 onClick={() => removeAttachment(i)}
@@ -358,7 +355,6 @@ export function ChatInput({
             <input
               ref={fileInputRef}
               type="file"
-              accept={ALLOWED_TYPES.join(",")}
               multiple
               tabIndex={-1}
               aria-hidden="true"

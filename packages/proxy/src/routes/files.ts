@@ -8,7 +8,8 @@ import { extname, posix, win32 } from "node:path";
 import { Readable } from "node:stream";
 import { homedir } from "node:os";
 
-const IMAGE_EXTS: Record<string, string> = {
+const MIME_TYPES: Record<string, string> = {
+  // Images
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
@@ -17,6 +18,29 @@ const IMAGE_EXTS: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".bmp": "image/bmp",
   ".ico": "image/x-icon",
+  // Videos
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".ogg": "video/ogg",
+  ".mov": "video/quicktime",
+  // Audio
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  // Documents / Code / Text
+  ".txt": "text/plain; charset=utf-8",
+  ".log": "text/plain; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".pdf": "application/pdf",
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".ts": "text/plain; charset=utf-8",
+  ".md": "text/markdown; charset=utf-8",
+  ".py": "text/plain; charset=utf-8",
+  ".sh": "text/plain; charset=utf-8",
+  ".yml": "text/plain; charset=utf-8",
+  ".yaml": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8",
 };
 
 function fileUriToPath(
@@ -143,12 +167,8 @@ export function registerFileRoutes(app: Hono): void {
       return c.json({ error: "Access denied" }, 403);
     }
 
-    // Only serve images
     const ext = extname(resolved).toLowerCase();
-    const mimeType = IMAGE_EXTS[ext];
-    if (!mimeType) {
-      return c.json({ error: `Unsupported file type: ${ext}` }, 400);
-    }
+    const mimeType = MIME_TYPES[ext] ?? "application/octet-stream";
 
     if (!existsSync(resolved)) {
       return c.json({ error: "File not found" }, 404);

@@ -30,7 +30,7 @@ describe("imageAttachments", () => {
     );
 
     await expect(prepareAttachment(file)).rejects.toThrow(
-      "GIF and SVG attachments must stay under",
+      "Non-image attachments must stay under",
     );
   });
 

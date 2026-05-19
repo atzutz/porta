@@ -1,7 +1,6 @@
 import type { MediaAttachment } from "../types";
 
 const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const PASSTHROUGH_TYPES = new Set(["image/gif", "image/svg+xml"]);
 const MAX_ATTACHMENT_BYTES = 1024 * 1024;
 const MAX_TOTAL_ATTACHMENT_BYTES = 2621440;
 const MAX_RASTER_DIMENSION = 2048;
@@ -128,20 +127,17 @@ export async function prepareAttachment(file: File): Promise<PreparedAttachment>
     return transcodeRaster(file);
   }
 
-  if (PASSTHROUGH_TYPES.has(file.type)) {
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      throw new Error(
-        `${file.name} is ${formatAttachmentBytes(file.size)}. GIF and SVG attachments must stay under ${formatAttachmentBytes(MAX_ATTACHMENT_BYTES)}.`,
-      );
-    }
-    return {
-      mimeType: file.type,
-      inlineData: await blobToBase64(file),
-      bytes: file.size,
-    };
+  // Pass through all other file types directly
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    throw new Error(
+      `${file.name} is ${formatAttachmentBytes(file.size)}. Non-image attachments must stay under ${formatAttachmentBytes(MAX_ATTACHMENT_BYTES)}.`,
+    );
   }
-
-  throw new Error(`Unsupported image type: ${file.type || "unknown"}`);
+  return {
+    mimeType: file.type || "application/octet-stream",
+    inlineData: await blobToBase64(file),
+    bytes: file.size,
+  };
 }
 
 export async function prepareAttachments(

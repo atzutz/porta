@@ -65,7 +65,7 @@ describe("ChatInput", () => {
     await waitFor(() => {
       expect(mockOnSend).not.toHaveBeenCalled();
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "GIF and SVG attachments must stay under",
+        "Non-image attachments must stay under",
       );
     });
   });
