@@ -1,8 +1,8 @@
 import type { MediaAttachment } from "../types";
 
 const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const MAX_ATTACHMENT_BYTES = 1024 * 1024;
-const MAX_TOTAL_ATTACHMENT_BYTES = 2621440;
+const MAX_ATTACHMENT_BYTES = 200 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENT_BYTES = 500 * 1024 * 1024;
 const MAX_RASTER_DIMENSION = 2048;
 const SCALE_STEPS = [1, 0.85, 0.7, 0.55];
 const QUALITY_STEPS = [0.86, 0.76, 0.66, 0.56];

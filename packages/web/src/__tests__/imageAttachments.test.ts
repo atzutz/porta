@@ -6,7 +6,9 @@ import {
 } from "../utils/imageAttachments";
 
 function fileOfSize(size: number, name: string, type: string): File {
-  return new File([new Uint8Array(size)], name, { type });
+  const f = new File(["tiny"], name, { type });
+  Object.defineProperty(f, "size", { value: size });
+  return f;
 }
 
 describe("imageAttachments", () => {
@@ -35,10 +37,7 @@ describe("imageAttachments", () => {
   });
 
   it("rejects attachment batches that exceed the total limit", async () => {
-    const perFile = Math.min(
-      attachmentLimits.maxAttachmentBytes - 1,
-      900 * 1024,
-    );
+    const perFile = 170 * 1024 * 1024;
     const files = [
       fileOfSize(perFile, "one.svg", "image/svg+xml"),
       fileOfSize(perFile, "two.svg", "image/svg+xml"),

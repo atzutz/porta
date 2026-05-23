@@ -47,10 +47,11 @@ describe("ChatInput", () => {
     expect(fileInput).not.toBeNull();
 
     const file = new File(
-      [new Uint8Array(1024 * 1024 + 1)],
+      ["tiny"],
       "large.svg",
       { type: "image/svg+xml" },
     );
+    Object.defineProperty(file, "size", { value: 200 * 1024 * 1024 + 1 });
 
     fireEvent.change(fileInput as HTMLInputElement, {
       target: { files: [file] },
