@@ -88,6 +88,8 @@ export interface TrajectoryStep {
   viewCodeItem?: ViewCodeItemData;
   listDirectory?: ListDirectoryData;
   find?: FindData;
+  mcpTool?: McpToolData;
+  requestedInteraction?: RequestedInteractionData;
   /** File permission request can appear on any tool step */
   filePermissionRequest?: FilePermissionRequest;
   errorMessage?: {
@@ -251,3 +253,25 @@ export interface ClientSettings {
   /** Auto execution policy for terminal commands (1: OFF/Require Review, 3: EAGER/Always Proceed, 4: PROCEED_IN_SANDBOX) */
   cascadeAutoExecutionPolicy: number;
 }
+
+// ── MCP Tool Data ──
+
+export interface McpToolData {
+  serverName?: string;
+  toolCall?: {
+    name?: string;
+    argumentsJson?: string;
+  };
+}
+
+// ── Requested Interaction Data ──
+
+export interface RequestedInteractionData {
+  permission?: {
+    resource?: {
+      action?: string;
+      target?: string;
+    };
+  };
+}
+

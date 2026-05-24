@@ -418,3 +418,109 @@ export function ErrorMessageCard({ step, onRetry }: ErrorMessageCardProps) {
     </div>
   );
 }
+
+// ── MCP Tool Card ──
+
+export interface McpToolCardProps {
+  step: TrajectoryStep;
+  onCommandAction?: (
+    trajectoryId: string,
+    stepIndex: number,
+    approved: boolean,
+  ) => Promise<void>;
+}
+
+export function McpToolCard({ step, onCommandAction }: McpToolCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [responded, setResponded] = useState(false);
+  const mcp = step.mcpTool;
+  if (!mcp) return null;
+
+  const isWaiting = step.status === "CORTEX_STEP_STATUS_WAITING";
+  const serverName = mcp.serverName ?? "";
+  const toolName = mcp.toolCall?.name ?? "";
+  const args = mcp.toolCall?.argumentsJson ?? "{}";
+
+  const trajectoryId = step.metadata?.sourceTrajectoryStepInfo?.trajectoryId ?? "";
+  const stepIndex = step.metadata?.sourceTrajectoryStepInfo?.stepIndex ?? 0;
+
+  const statusClass = isWaiting
+    ? "cmd-wait"
+    : step.status === "CORTEX_STEP_STATUS_ERROR"
+      ? "cmd-fail"
+      : "cmd-ok";
+
+  const handleAction = async (approved: boolean) => {
+    if (!onCommandAction) return;
+    setResponded(true);
+    try {
+      await onCommandAction(trajectoryId, stepIndex, approved);
+    } catch {
+      setResponded(false);
+    }
+  };
+
+  let parsedArgs: Record<string, unknown> | null = null;
+  try {
+    parsedArgs = JSON.parse(args);
+  } catch {
+    // Ignore invalid JSON
+  }
+
+  return (
+    <div className={`chat-block step-card command-card ${statusClass}`}>
+      <button
+        className="step-card-header"
+        onClick={() => parsedArgs && setExpanded((v) => !v)}
+        title={parsedArgs ? "Toggle arguments" : undefined}
+        style={{ width: "100%", border: "none", background: "none", cursor: parsedArgs ? "pointer" : "default" }}
+      >
+        <span className="step-card-icon">
+          <IconLock size={12} />
+        </span>
+        <span className="step-card-desc" style={{ flex: 1, textAlign: "left" }}>
+          {isWaiting ? "MCP permission requested: " : "Called MCP tool: "}
+          <code className="step-card-command" style={{ background: "var(--bg-secondary)", padding: "2px 4px", borderRadius: "3px", fontFamily: "var(--font-mono)", fontSize: "11px" }}>
+            {serverName}/{toolName}
+          </code>
+        </span>
+        {parsedArgs && (
+          <span className={`step-card-chevron ${expanded ? "open" : ""}`}>
+            ▾
+          </span>
+        )}
+      </button>
+      {isWaiting && !responded && onCommandAction && (
+        <div className="step-card-actions command-action-bar">
+          <span className="command-waiting-label">
+            <span className="waiting-dot" />
+            Waiting for approval
+          </span>
+          <div className="command-action-buttons">
+            <button
+              className="approve-btn command-action-btn reject"
+              onClick={() => handleAction(false)}
+            >
+              Reject
+            </button>
+            <button
+              className="approve-btn command-action-btn approve"
+              onClick={() => handleAction(true)}
+            >
+              Approve
+            </button>
+          </div>
+        </div>
+      )}
+      {expanded && parsedArgs && (
+        <div className="step-card-output" style={{ background: "var(--bg-primary)", borderTop: "1px solid var(--border-subtle)", padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>
+          <div style={{ marginBottom: "4px", fontWeight: 600 }}>Arguments:</div>
+          <pre style={{ margin: 0, overflowX: "auto", fontFamily: "inherit", fontSize: "inherit", color: "inherit" }}>
+            {JSON.stringify(parsedArgs, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+

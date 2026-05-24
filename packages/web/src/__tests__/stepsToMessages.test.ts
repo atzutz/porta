@@ -405,4 +405,25 @@ describe("stepsToMessages", () => {
     expect(msgs[0].type).toBe("CORTEX_STEP_TYPE_ERROR_MESSAGE");
     expect(msgs[0].step?.errorMessage?.error?.userErrorMessage).toBe("No capacity");
   });
+
+  // ── MCP tool ──
+
+  it("converts MCP tool step to system message with step data", () => {
+    const step: TrajectoryStep = {
+      type: "CORTEX_STEP_TYPE_MCP_TOOL",
+      mcpTool: {
+        serverName: "asana",
+        toolCall: {
+          name: "asana_list_workspaces",
+          argumentsJson: "{}",
+        },
+      },
+    };
+    const msgs = stepsToMessages([step]);
+    expect(msgs).toHaveLength(1);
+    expect(msgs[0].role).toBe("system");
+    expect(msgs[0].type).toBe("CORTEX_STEP_TYPE_MCP_TOOL");
+    expect(msgs[0].step?.mcpTool?.serverName).toBe("asana");
+    expect(msgs[0].step?.mcpTool?.toolCall?.name).toBe("asana_list_workspaces");
+  });
 });

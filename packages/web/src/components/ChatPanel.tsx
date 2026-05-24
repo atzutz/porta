@@ -22,6 +22,7 @@ import {
   CodeActionCard,
   FilePermissionCard,
   ErrorMessageCard,
+  McpToolCard,
   getFilePermissionRequest,
 } from "./StepCards";
 import {
@@ -179,6 +180,13 @@ function SystemMessage({
       return (
         <div className="message system">
           <ErrorMessageCard step={msg.step} onRetry={onRevert} />
+        </div>
+      );
+    }
+    if (msg.type === "CORTEX_STEP_TYPE_MCP_TOOL") {
+      return (
+        <div className="message system">
+          <McpToolCard step={msg.step} onCommandAction={onCommandAction} />
         </div>
       );
     }

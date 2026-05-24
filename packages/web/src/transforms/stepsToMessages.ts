@@ -198,6 +198,14 @@ export function stepsToMessages(steps: TrajectoryStep[]): ChatMessage[] {
         type,
         step,
       });
+    } else if (type === "CORTEX_STEP_TYPE_MCP_TOOL" && step.mcpTool) {
+      messages.push({
+        role: "system",
+        content: "",
+        stepIndex: i,
+        type,
+        step,
+      });
     }
   }
 
