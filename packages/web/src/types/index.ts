@@ -262,6 +262,7 @@ export interface McpToolData {
     name?: string;
     argumentsJson?: string;
   };
+  resultString?: string;
 }
 
 // ── Requested Interaction Data ──

@@ -440,6 +440,7 @@ export function McpToolCard({ step, onCommandAction }: McpToolCardProps) {
   const serverName = mcp.serverName ?? "";
   const toolName = mcp.toolCall?.name ?? "";
   const args = mcp.toolCall?.argumentsJson ?? "{}";
+  const result = mcp.resultString;
 
   const trajectoryId = step.metadata?.sourceTrajectoryStepInfo?.trajectoryId ?? "";
   const stepIndex = step.metadata?.sourceTrajectoryStepInfo?.stepIndex ?? 0;
@@ -467,13 +468,26 @@ export function McpToolCard({ step, onCommandAction }: McpToolCardProps) {
     // Ignore invalid JSON
   }
 
+  const hasArgs = parsedArgs && Object.keys(parsedArgs).length > 0;
+  const hasContent = hasArgs || !!result;
+
+  let formattedResult = result ?? "";
+  try {
+    if (result) {
+      const parsed = JSON.parse(result);
+      formattedResult = JSON.stringify(parsed, null, 2);
+    }
+  } catch {
+    // Keep raw string if not JSON
+  }
+
   return (
     <div className={`chat-block step-card command-card ${statusClass}`}>
       <button
         className="step-card-header"
-        onClick={() => parsedArgs && setExpanded((v) => !v)}
-        title={parsedArgs ? "Toggle arguments" : undefined}
-        style={{ width: "100%", border: "none", background: "none", cursor: parsedArgs ? "pointer" : "default" }}
+        onClick={() => hasContent && setExpanded((v) => !v)}
+        title={hasContent ? "Toggle details" : undefined}
+        style={{ width: "100%", border: "none", background: "none", cursor: hasContent ? "pointer" : "default" }}
       >
         <span className="step-card-icon">
           <IconLock size={12} />
@@ -484,7 +498,7 @@ export function McpToolCard({ step, onCommandAction }: McpToolCardProps) {
             {serverName}/{toolName}
           </code>
         </span>
-        {parsedArgs && (
+        {hasContent && (
           <span className={`step-card-chevron ${expanded ? "open" : ""}`}>
             ▾
           </span>
@@ -512,12 +526,24 @@ export function McpToolCard({ step, onCommandAction }: McpToolCardProps) {
           </div>
         </div>
       )}
-      {expanded && parsedArgs && (
+      {expanded && hasContent && (
         <div className="step-card-output" style={{ background: "var(--bg-primary)", borderTop: "1px solid var(--border-subtle)", padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>
-          <div style={{ marginBottom: "4px", fontWeight: 600 }}>Arguments:</div>
-          <pre style={{ margin: 0, overflowX: "auto", fontFamily: "inherit", fontSize: "inherit", color: "inherit" }}>
-            {JSON.stringify(parsedArgs, null, 2)}
-          </pre>
+          {hasArgs && (
+            <div style={{ marginBottom: "10px" }}>
+              <div style={{ marginBottom: "4px", fontWeight: 600 }}>Arguments:</div>
+              <pre style={{ margin: 0, overflowX: "auto", fontFamily: "inherit", fontSize: "inherit", color: "inherit" }}>
+                {JSON.stringify(parsedArgs, null, 2)}
+              </pre>
+            </div>
+          )}
+          {result && (
+            <div>
+              <div style={{ marginBottom: "4px", fontWeight: 600 }}>Output:</div>
+              <pre style={{ margin: 0, overflowX: "auto", fontFamily: "inherit", fontSize: "inherit", color: "inherit", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                {formattedResult}
+              </pre>
+            </div>
+          )}
         </div>
       )}
     </div>
