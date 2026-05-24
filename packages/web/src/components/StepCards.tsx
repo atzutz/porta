@@ -468,7 +468,7 @@ export function McpToolCard({ step, onCommandAction }: McpToolCardProps) {
     // Ignore invalid JSON
   }
 
-  const hasArgs = parsedArgs && Object.keys(parsedArgs).length > 0;
+  const hasArgs = !!mcp.toolCall;
   const hasContent = hasArgs || !!result;
 
   let formattedResult = result ?? "";
@@ -529,10 +529,10 @@ export function McpToolCard({ step, onCommandAction }: McpToolCardProps) {
       {expanded && hasContent && (
         <div className="step-card-output" style={{ background: "var(--bg-primary)", borderTop: "1px solid var(--border-subtle)", padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>
           {hasArgs && (
-            <div style={{ marginBottom: "10px" }}>
+            <div style={{ marginBottom: result ? "10px" : "0px" }}>
               <div style={{ marginBottom: "4px", fontWeight: 600 }}>Arguments:</div>
               <pre style={{ margin: 0, overflowX: "auto", fontFamily: "inherit", fontSize: "inherit", color: "inherit" }}>
-                {JSON.stringify(parsedArgs, null, 2)}
+                {parsedArgs ? JSON.stringify(parsedArgs, null, 2) : args}
               </pre>
             </div>
           )}

@@ -76,4 +76,12 @@ describe("McpToolCard", () => {
     expect(screen.getByText("Output:")).toBeInTheDocument();
     expect(screen.getByText(/TheSoul Group/)).toBeInTheDocument();
   });
+
+  it("expands to show empty arguments when argumentsJson is empty", async () => {
+    render(<McpToolCard step={waitingStep()} />);
+    const headerButton = screen.getByTitle("Toggle details");
+    await userEvent.click(headerButton);
+    expect(screen.getByText("Arguments:")).toBeInTheDocument();
+    expect(screen.getByText("{}")).toBeInTheDocument();
+  });
 });
