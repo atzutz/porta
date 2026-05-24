@@ -574,11 +574,24 @@ export function registerConversationRoutes(app: Hono): void {
         const typeConfig =
           plannerType === "planning" ? { planning: {} } : { conversational: {} };
 
-        if (model || plannerType) {
+        const policy = body.cascadeAutoExecutionPolicy !== undefined ? Number(body.cascadeAutoExecutionPolicy) : undefined;
+
+        if (model || plannerType || policy !== undefined) {
           req.cascadeConfig = {
             plannerConfig: {
               plannerTypeConfig: typeConfig,
               ...(model ? { requestedModel: { model } } : {}),
+              ...(policy !== undefined
+                ? {
+                    toolConfig: {
+                      runCommand: {
+                        autoCommandConfig: {
+                          autoExecutionPolicy: policy,
+                        },
+                      },
+                    },
+                  }
+                : {}),
             },
           };
         }
