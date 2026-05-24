@@ -11,7 +11,7 @@ export function handleRPCError(c: { json: Function }, err: unknown) {
         ? 401
         : err.code === "unavailable"
           ? 503
-          : 502;
+          : 500;
     return c.json({ error: err.message, code: err.code }, status);
   }
   const message = err instanceof Error ? err.message : String(err);

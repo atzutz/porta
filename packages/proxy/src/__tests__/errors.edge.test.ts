@@ -17,21 +17,21 @@ function mockContext() {
 }
 
 describe("handleRPCError — extended edge cases", () => {
-  it("maps 'not_found' RPCError to 502 (non-special code)", () => {
+  it("maps 'not_found' RPCError to 500 (non-special code)", () => {
     const c = mockContext();
     handleRPCError(c, new RPCError("not found", "not_found"));
     expect(c.result).toEqual({
       body: { error: "not found", code: "not_found" },
-      status: 502,
+      status: 500,
     });
   });
 
-  it("maps 'permission_denied' RPCError to 502", () => {
+  it("maps 'permission_denied' RPCError to 500", () => {
     const c = mockContext();
     handleRPCError(c, new RPCError("denied", "permission_denied"));
     expect(c.result).toEqual({
       body: { error: "denied", code: "permission_denied" },
-      status: 502,
+      status: 500,
     });
   });
 

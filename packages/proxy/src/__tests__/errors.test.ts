@@ -35,12 +35,12 @@ describe("handleRPCError", () => {
     });
   });
 
-  it("maps unknown RPCError codes to 502", () => {
+  it("maps unknown RPCError codes to 500", () => {
     const c = mockContext();
     handleRPCError(c, new RPCError("rpc fail", "internal"));
     expect(c.result).toEqual({
       body: { error: "rpc fail", code: "internal" },
-      status: 502,
+      status: 500,
     });
   });
 

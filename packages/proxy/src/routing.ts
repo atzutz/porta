@@ -138,7 +138,7 @@ export async function discoverOwnerInstance(
     // Only route to the LS that owns this workspace — never misroute
     const normalWsId = normalizeWorkspaceId(wsId);
     const wsOwners = candidates.filter(
-      (c) => c.inst.workspaceId && normalizeWorkspaceId(c.inst.workspaceId) === normalWsId,
+      (c) => !c.inst.workspaceId || normalizeWorkspaceId(c.inst.workspaceId) === normalWsId,
     );
     if (wsOwners.length === 0) return null;
     wsOwners.sort((a, b) => b.stepCount - a.stepCount);
@@ -227,7 +227,20 @@ export async function resolveAndCall<T>(
   // Discover owner: query all LSes for trajectory summaries.
   // Pass readOnly so heuristic fallback (RUNNING/stepCount) is only used
   // for reads. Writes get null when workspace metadata is unavailable.
-  const owner = await discoverOwnerInstance(cascadeId, instances, readOnly);
+  let owner = await discoverOwnerInstance(cascadeId, instances, readOnly);
+  if (!owner && !readOnly) {
+    // Force LS instances to load the conversation from disk
+    await Promise.allSettled(
+      instances.map(async (inst) => {
+        try {
+          await rpc.call("GetCascadeTrajectory", { cascadeId }, inst);
+        } catch {}
+      }),
+    );
+    // Try to discover the owner again after loading
+    owner = await discoverOwnerInstance(cascadeId, instances, false);
+  }
+
   if (owner) {
     const data = await rpc.call<T>(method, body, owner);
     return { data, instance: owner };
