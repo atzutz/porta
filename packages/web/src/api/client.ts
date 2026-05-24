@@ -65,12 +65,17 @@ export const api = {
       workspaceInfos?: { workspaceUri: string; gitRootUri?: string }[];
     }>("/api/workspaces"),
 
-  startConversation: (workspaceUri?: string, fileAccessGranted = false) =>
+  startConversation: (
+    workspaceUri?: string,
+    fileAccessGranted = false,
+    cascadeAutoExecutionPolicy?: number,
+  ) =>
     request<{ cascadeId: string }>("/api/conversations", {
       method: "POST",
       body: JSON.stringify({
         ...(workspaceUri ? { workspaceFolderAbsoluteUri: workspaceUri } : {}),
         fileAccessGranted,
+        cascadeAutoExecutionPolicy,
       }),
     }),
 
@@ -82,6 +87,7 @@ export const api = {
     media?: Array<{ mimeType: string; inlineData: string }>,
     plannerType?: string,
     fileAccessGranted = false,
+    cascadeAutoExecutionPolicy?: number,
   ) =>
     request(`/api/conversations/${cascadeId}/messages`, {
       method: "POST",
@@ -92,6 +98,7 @@ export const api = {
         media,
         plannerType,
         fileAccessGranted,
+        cascadeAutoExecutionPolicy,
       }),
     }),
 

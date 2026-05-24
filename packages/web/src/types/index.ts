@@ -248,4 +248,6 @@ export interface ClientSettings {
   defaultModel: string | null;
   /** Planner type used when the user hasn't explicitly picked one per-message. */
   defaultPlannerType: "conversational" | "planning";
+  /** Auto execution policy for terminal commands (1: OFF/Require Review, 3: EAGER/Always Proceed, 4: PROCEED_IN_SANDBOX) */
+  cascadeAutoExecutionPolicy: number;
 }

@@ -105,4 +105,18 @@ describe("useStepsStream", () => {
 
     expect(getConversation).not.toHaveBeenCalled();
   });
+
+  it("calls onIdleTransition when initialFetch completes", async () => {
+    const getSteps = vi
+      .spyOn(api, "getSteps")
+      .mockResolvedValue({ steps: [], offset: 0 });
+    const onIdle = vi.fn();
+
+    renderHook(() => useStepsStream("cascade-1", 0, onIdle, false));
+
+    await waitFor(() => {
+      expect(getSteps).toHaveBeenCalledTimes(1);
+      expect(onIdle).toHaveBeenCalledTimes(1);
+    });
+  });
 });

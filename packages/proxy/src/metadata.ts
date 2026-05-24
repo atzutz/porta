@@ -19,6 +19,7 @@ export const CONVERSATIONS_DIR = join(
  */
 export async function getMetadata(
   fileAccessGranted = false,
+  cascadeAutoExecutionPolicy?: number,
 ): Promise<Record<string, unknown>> {
   const meta: Record<string, unknown> = {
     ideName: "vscode",
@@ -28,6 +29,9 @@ export async function getMetadata(
   if (fileAccessGranted) {
     meta.allowFileAccess = true;
     meta.allWorkspaceTrustGranted = true;
+  }
+  if (cascadeAutoExecutionPolicy !== undefined) {
+    meta.cascadeAutoExecutionPolicy = cascadeAutoExecutionPolicy;
   }
   return meta;
 }

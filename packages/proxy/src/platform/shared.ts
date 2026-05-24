@@ -11,8 +11,12 @@ function escapeRegExp(value: string): string {
 }
 
 function parseExecutable(args: string): string | undefined {
-  const match = args.match(/^(?:"([^"]+)"|'([^']+)'|(\S+))(?:\s|$)/);
-  return match?.[1] ?? match?.[2] ?? match?.[3];
+  const match = args.match(/^(?:"([^"]+)"|'([^']+)')(?:\s|$)/);
+  if (match) return match[1] ?? match[2];
+
+  const flagIndex = args.indexOf(" --");
+  const pathPart = flagIndex !== -1 ? args.substring(0, flagIndex) : args;
+  return pathPart.trim();
 }
 
 export function isLanguageServerExecutable(value: string): boolean {

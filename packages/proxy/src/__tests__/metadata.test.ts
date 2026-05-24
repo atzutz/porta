@@ -24,6 +24,12 @@ describe("getMetadata", () => {
     expect(meta.allWorkspaceTrustGranted).toBe(true);
   });
 
+  it("includes cascadeAutoExecutionPolicy when provided", async () => {
+    const meta = await getMetadata(false, 3);
+    expect(meta.ideName).toBe("vscode");
+    expect(meta.cascadeAutoExecutionPolicy).toBe(3);
+  });
+
   it("returns a fresh object on each call", async () => {
     const a = await getMetadata();
     const b = await getMetadata();

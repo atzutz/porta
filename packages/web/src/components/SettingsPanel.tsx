@@ -76,8 +76,20 @@ export function SettingsPanel({ settings, onUpdate, onBack }: Props) {
     [onUpdate, flashSaved],
   );
 
+  const handleAutoExecutionChange = useCallback(
+    (value: number) => {
+      onUpdate({ cascadeAutoExecutionPolicy: value });
+      flashSaved();
+    },
+    [onUpdate, flashSaved],
+  );
+
   const handleReset = useCallback(() => {
-    onUpdate({ defaultModel: null, defaultPlannerType: "conversational" });
+    onUpdate({
+      defaultModel: null,
+      defaultPlannerType: "conversational",
+      cascadeAutoExecutionPolicy: 1,
+    });
     flashSaved();
   }, [onUpdate, flashSaved]);
 
@@ -147,6 +159,28 @@ export function SettingsPanel({ settings, onUpdate, onBack }: Props) {
             >
               <option value="conversational">Fast</option>
               <option value="planning">Plan</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ── Terminal ── */}
+        <div className="settings-section">
+          <h2 className="settings-section-title">Terminal</h2>
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <span className="settings-row-label">Terminal Command Auto Execution</span>
+              <span className="settings-row-desc">
+                Controls whether terminal commands require your approval before running.
+              </span>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.cascadeAutoExecutionPolicy}
+              onChange={(e) => handleAutoExecutionChange(Number(e.target.value))}
+            >
+              <option value={1}>Require Review</option>
+              <option value={3}>Always Proceed</option>
+              <option value={4}>Proceed in Sandbox</option>
             </select>
           </div>
         </div>

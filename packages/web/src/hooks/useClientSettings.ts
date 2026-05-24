@@ -14,6 +14,7 @@ const STORAGE_KEY = "porta:settings";
 const DEFAULT_SETTINGS: ClientSettings = {
   defaultModel: DEFAULT_MODEL,
   defaultPlannerType: "conversational",
+  cascadeAutoExecutionPolicy: 1, // Default: OFF / Require Review
 };
 
 function readSettings(): ClientSettings {

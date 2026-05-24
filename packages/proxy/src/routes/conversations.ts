@@ -470,7 +470,10 @@ export function registerConversationRoutes(app: Hono): void {
   app.post("/api/conversations", async (c) => {
     try {
       const body = await c.req.json().catch(() => ({}));
-      const metadata = await getMetadata(!!body.fileAccessGranted);
+      const metadata = await getMetadata(
+        !!body.fileAccessGranted,
+        body.cascadeAutoExecutionPolicy !== undefined ? Number(body.cascadeAutoExecutionPolicy) : undefined,
+      );
 
       let workspaceUri: string | undefined = body.workspaceFolderAbsoluteUri;
 
@@ -551,7 +554,10 @@ export function registerConversationRoutes(app: Hono): void {
       return await runConversationMutation(id, async () => {
         const body = await c.req.json();
         const { items, model, media, plannerType, clientMessageId } = body;
-        const metadata = await getMetadata(!!body.fileAccessGranted);
+        const metadata = await getMetadata(
+          !!body.fileAccessGranted,
+          body.cascadeAutoExecutionPolicy !== undefined ? Number(body.cascadeAutoExecutionPolicy) : undefined,
+        );
         const { count: preSendStepCount, instance } = await getStepCount(id);
 
         const req: Record<string, unknown> = {

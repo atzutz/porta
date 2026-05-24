@@ -212,7 +212,9 @@ export async function resolveAndCall<T>(
       } catch (err) {
         if (
           err instanceof RPCError &&
-          (err.code === "unavailable" || err.code === "not_found")
+          (err.code === "unavailable" ||
+            err.code === "not_found" ||
+            err.message.includes("trajectory not found"))
         ) {
           // Affinity LS is dead or lost the conversation — clear stale affinity and re-discover
           conversationAffinity.delete(cascadeId);

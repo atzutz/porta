@@ -6,6 +6,7 @@ import { slugFromUri } from "./useWorkspaces";
 import type { ChatMessage, MediaAttachment } from "../types";
 import type { PlannerType } from "../components/ChatInput";
 import { DEFAULT_MODEL } from "../constants";
+import { useClientSettings } from "./useClientSettings";
 
 interface UseChatActionsArgs {
   activeId: string | null;
@@ -58,6 +59,7 @@ export function useChatActions({
   optimisticRemove,
 }: UseChatActionsArgs): UseChatActionsResult {
   const navigate = useNavigate();
+  const { settings } = useClientSettings();
 
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>(
     [],
@@ -132,6 +134,7 @@ export function useChatActions({
           const result = await api.startConversation(
             currentWorkspaceUri || undefined,
             granted,
+            settings.cascadeAutoExecutionPolicy,
           );
           cascadeId = result.cascadeId;
           navigate(`/${projectSlug}/${cascadeId}`, { replace: true });
@@ -145,6 +148,7 @@ export function useChatActions({
           media && media.length > 0 ? media : undefined,
           plannerType,
           granted,
+          settings.cascadeAutoExecutionPolicy,
         );
         draftStore.delete(cascadeId);
         setStepsRefreshKey((k) => k + 1);
@@ -168,7 +172,7 @@ export function useChatActions({
         setOptimisticMessages((prev) => [...prev, errorMsg]);
       }
     },
-    [activeId, refresh, currentWorkspaceUri, projectSlug, navigate],
+    [activeId, refresh, currentWorkspaceUri, projectSlug, navigate, settings.cascadeAutoExecutionPolicy],
   );
 
   const handleStop = useCallback(async () => {

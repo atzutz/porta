@@ -274,6 +274,8 @@ export function useStepsStream(
       // Connect WS, starting deltas from the end of our loaded window
       const syncFrom = result.offset + result.count;
       connectWs(syncFrom);
+      // Trigger sidebar refresh so the conversations list metadata updates instantly
+      onIdleRef.current?.();
     })();
 
     return () => {
