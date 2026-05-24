@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS: ClientSettings = {
   defaultModel: DEFAULT_MODEL,
   defaultPlannerType: "conversational",
   cascadeAutoExecutionPolicy: 1, // Default: OFF / Require Review
+  cascadeMcpAutoApproval: false, // Default: OFF / Require Review
 };
 
 function readSettings(): ClientSettings {

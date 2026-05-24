@@ -134,14 +134,25 @@ export function useStepsStream(
         return;
       }
 
+      let mcpAutoApprove = "false";
+      try {
+        const raw = localStorage.getItem("porta:settings");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.cascadeMcpAutoApproval) {
+            mcpAutoApprove = "true";
+          }
+        }
+      } catch {}
+
       const apiBase = import.meta.env.VITE_API_BASE ?? "";
       let url: string;
       if (apiBase) {
         const wsBase = apiBase.replace(/^http/, "ws");
-        url = `${wsBase}/api/conversations/${cascadeId}/ws`;
+        url = `${wsBase}/api/conversations/${cascadeId}/ws?mcpAutoApprove=${mcpAutoApprove}`;
       } else {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        url = `${protocol}//${window.location.host}/api/conversations/${cascadeId}/ws`;
+        url = `${protocol}//${window.location.host}/api/conversations/${cascadeId}/ws?mcpAutoApprove=${mcpAutoApprove}`;
       }
       const gen = genRef.current;
 

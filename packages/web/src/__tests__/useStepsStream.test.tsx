@@ -119,4 +119,29 @@ describe("useStepsStream", () => {
       expect(onIdle).toHaveBeenCalledTimes(1);
     });
   });
+
+  it("appends mcpAutoApprove query parameter to the WebSocket URL based on localStorage settings", async () => {
+    vi.spyOn(api, "getSteps").mockResolvedValue({ steps: [], offset: 0 });
+
+    // Test with cascadeMcpAutoApproval = true
+    localStorage.setItem("porta:settings", JSON.stringify({ cascadeMcpAutoApproval: true }));
+    const { unmount } = renderHook(() => useStepsStream("cascade-1", 0));
+    await waitFor(() => {
+      expect(MockWebSocket.instances).toHaveLength(1);
+    });
+    expect(MockWebSocket.instances[0].url).toContain("mcpAutoApprove=true");
+
+    unmount();
+    MockWebSocket.instances = [];
+
+    // Test with cascadeMcpAutoApproval = false
+    localStorage.setItem("porta:settings", JSON.stringify({ cascadeMcpAutoApproval: false }));
+    renderHook(() => useStepsStream("cascade-1", 0));
+    await waitFor(() => {
+      expect(MockWebSocket.instances).toHaveLength(1);
+    });
+    expect(MockWebSocket.instances[0].url).toContain("mcpAutoApprove=false");
+
+    localStorage.removeItem("porta:settings");
+  });
 });

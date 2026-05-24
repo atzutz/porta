@@ -188,7 +188,7 @@ export function setupWebSocket(
 
   wss.on(
     "connection",
-    (ws: WebSocket, _req: IncomingMessage, cascadeId: string) => {
+    (ws: WebSocket, req: IncomingMessage, cascadeId: string) => {
       const shortId = cascadeId.slice(0, 8);
       console.log(`[ws:${shortId}] connected`);
 
@@ -202,6 +202,12 @@ export function setupWebSocket(
       let emptyCount = 0;
       let minActiveUntil = 0;
       let peerAlive = true;
+
+      const url = new URL(req.url ?? "", `http://localhost:${port}`);
+      const autoApproveMcp = url.searchParams.get("mcpAutoApprove") === "true";
+      const autoApprovedSteps = new Set<string>();
+      let autoApproveCount = 0;
+      const MAX_AUTO_APPROVES = 15;
 
       // ── Helpers ──
 
@@ -309,6 +315,55 @@ export function setupWebSocket(
 
           const newSteps = data.steps ?? [];
           if (newSteps.length === 0) return false;
+
+          if (autoApproveMcp) {
+            for (const step of (newSteps as any[])) {
+              if (
+                step.type === "CORTEX_STEP_TYPE_MCP_TOOL" &&
+                step.status === "CORTEX_STEP_STATUS_WAITING"
+              ) {
+                const trajectoryId = step.metadata?.sourceTrajectoryStepInfo?.trajectoryId;
+                const stepIndex = step.metadata?.sourceTrajectoryStepInfo?.stepIndex;
+                if (trajectoryId && stepIndex !== undefined) {
+                  const key = `${trajectoryId}:${stepIndex}`;
+                  if (!autoApprovedSteps.has(key)) {
+                    if (autoApproveCount >= MAX_AUTO_APPROVES) {
+                      console.warn(
+                        `[ws:${shortId}] MCP Auto-Approval safety limit (${MAX_AUTO_APPROVES}) reached for cascade ${cascadeId}. Suspending auto-approvals.`
+                      );
+                      break;
+                    }
+                    autoApprovedSteps.add(key);
+                    autoApproveCount++;
+                    console.log(
+                      `[ws:${shortId}] Auto-approving MCP step ${stepIndex} (${autoApproveCount}/${MAX_AUTO_APPROVES}) for cascade ${cascadeId}`
+                    );
+                    void rpcForConversation(
+                      "HandleCascadeUserInteraction",
+                      cascadeId,
+                      {
+                        cascadeId,
+                        interaction: {
+                          trajectoryId,
+                          stepIndex: Number(stepIndex),
+                          permission: {
+                            allow: true,
+                          },
+                        },
+                      },
+                      undefined,
+                      true,
+                    ).catch((err) => {
+                      console.error(`[ws:${shortId}] Failed to auto-approve MCP step ${stepIndex}:`, err);
+                      autoApprovedSteps.delete(key);
+                      if (autoApproveCount > 0) autoApproveCount--;
+                    });
+                  }
+                }
+              }
+            }
+          }
+
           const annotatedSteps = messageTracker.annotateSteps(
             cascadeId,
             fetchOffset,

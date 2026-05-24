@@ -84,11 +84,20 @@ export function SettingsPanel({ settings, onUpdate, onBack }: Props) {
     [onUpdate, flashSaved],
   );
 
+  const handleMcpAutoApprovalChange = useCallback(
+    (value: boolean) => {
+      onUpdate({ cascadeMcpAutoApproval: value });
+      flashSaved();
+    },
+    [onUpdate, flashSaved],
+  );
+
   const handleReset = useCallback(() => {
     onUpdate({
       defaultModel: null,
       defaultPlannerType: "conversational",
       cascadeAutoExecutionPolicy: 1,
+      cascadeMcpAutoApproval: false,
     });
     flashSaved();
   }, [onUpdate, flashSaved]);
@@ -181,6 +190,27 @@ export function SettingsPanel({ settings, onUpdate, onBack }: Props) {
               <option value={1}>Require Review</option>
               <option value={3}>Always Proceed</option>
               <option value={4}>Proceed in Sandbox</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ── MCP Tools ── */}
+        <div className="settings-section">
+          <h2 className="settings-section-title">MCP Tools</h2>
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <span className="settings-row-label">MCP Tool Auto Approval</span>
+              <span className="settings-row-desc">
+                Controls whether Model Context Protocol (MCP) tool integrations (like Asana, GitHub) require approval.
+              </span>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.cascadeMcpAutoApproval ? "true" : "false"}
+              onChange={(e) => handleMcpAutoApprovalChange(e.target.value === "true")}
+            >
+              <option value="false">Require Review</option>
+              <option value="true">Always Proceed</option>
             </select>
           </div>
         </div>

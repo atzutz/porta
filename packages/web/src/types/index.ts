@@ -252,6 +252,8 @@ export interface ClientSettings {
   defaultPlannerType: "conversational" | "planning";
   /** Auto execution policy for terminal commands (1: OFF/Require Review, 3: EAGER/Always Proceed, 4: PROCEED_IN_SANDBOX) */
   cascadeAutoExecutionPolicy: number;
+  /** Auto approval policy for MCP tool calls (true: Always Proceed, false: Require Review) */
+  cascadeMcpAutoApproval: boolean;
 }
 
 // ── MCP Tool Data ──
