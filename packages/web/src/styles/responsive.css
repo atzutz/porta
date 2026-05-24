@@ -29,6 +29,9 @@
     border-right: 1px solid var(--border-subtle);
     transform: translateX(0);
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
   }
 
   .sidebar.sidebar-collapsed {
@@ -64,8 +67,12 @@
   /* ── Main header ── */
 
   .main-header {
-    padding: 0 12px;
+    padding-top: env(safe-area-inset-top, 0px);
+    height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+    padding-left: calc(12px + env(safe-area-inset-left, 0px));
+    padding-right: calc(12px + env(safe-area-inset-right, 0px));
     gap: 8px;
+    box-sizing: border-box;
   }
 
   .main-header-title {
@@ -80,7 +87,8 @@
   }
 
   .chat-area-inner {
-    padding: 0 12px;
+    padding-left: calc(12px + env(safe-area-inset-left, 0px));
+    padding-right: calc(12px + env(safe-area-inset-right, 0px));
     gap: 4px;
   }
 
@@ -176,7 +184,7 @@
   /* ── Chat input area ── */
 
   .chat-input-area {
-    padding: 6px 10px 12px;
+    padding: 6px 10px calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
   .model-selector-btn {
