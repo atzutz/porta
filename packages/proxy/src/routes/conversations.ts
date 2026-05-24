@@ -520,6 +520,7 @@ export function registerConversationRoutes(app: Hono): void {
         {
           ...body,
           metadata,
+          source: 1, // CORTEX_TRAJECTORY_SOURCE_CASCADE_CLIENT
           ...(workspaceUri
             ? {
                 workspaceFolderAbsoluteUri: workspaceUri,
