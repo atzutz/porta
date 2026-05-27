@@ -2,28 +2,21 @@ import { useState } from "react";
 import {
   IconCopy,
   IconCheck,
-  IconTerminal,
-  IconPencil,
-  IconFile,
-  IconFileText,
   IconLock,
   IconAlertTriangle,
+  IconChevron,
+  IconEye,
+  IconPlus,
+  IconEdit,
+  IconZap,
 } from "./Icons";
 import type { TrajectoryStep, FilePermissionRequest } from "../types";
 
-/** Extract file basename from a URI or path */
 function basename(uriOrPath: string): string {
   const cleaned = uriOrPath.replace(/^file:\/\//, "");
   return cleaned.split("/").pop() ?? cleaned;
 }
 
-/**
- * Extract a filePermissionRequest from any of the tool data fields
- * where the LS may embed it, or from the step's top-level field.
- *
- * The LS embeds filePermissionRequest in 6 step types:
- * CodeAction, ViewFile, ListDirectory, GrepSearch, ViewFileOutline, ViewCodeItem.
- */
 export function getFilePermissionRequest(
   step: TrajectoryStep,
 ): FilePermissionRequest | undefined {
@@ -38,12 +31,11 @@ export function getFilePermissionRequest(
   );
 }
 
-/** Inline copy button for step cards */
 function StepCopyBtn({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
-      className="msg-action-btn step-copy-btn"
+      className="step-copy-btn"
       title="Copy"
       onClick={(e) => {
         e.stopPropagation();
@@ -53,14 +45,13 @@ function StepCopyBtn({ text }: { text: string }) {
         });
       }}
     >
-      {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
+      {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
     </button>
   );
 }
 
 // ── File Permission Card ──
 
-/** Permission scope enum values matching the LS proto */
 const PERMISSION_SCOPE_ONCE = 1;
 const PERMISSION_SCOPE_CONVERSATION = 2;
 
@@ -101,18 +92,20 @@ export function FilePermissionCard({
     <div
       className={`chat-block step-card file-permission-card ${responded ? "cmd-ok" : isWaiting ? "cmd-wait" : ""}`}
     >
-      <div className="step-card-header">
+      <div className="step-card-header" style={{ cursor: "default" }}>
         <span className="step-card-icon">
-          <IconLock size={12} />
+          <IconLock size={16} />
         </span>
-        <span className="step-card-desc">
-          File access requested:{" "}
-          <code className="step-card-file">{displayPath}</code>
-          {isDir ? " (directory)" : ""}
-        </span>
+        <div className="command-card-main">
+          <span className="step-card-desc">
+            File access requested:{" "}
+            <code className="step-card-file">{displayPath}</code>
+            {isDir ? " (directory)" : ""}
+          </span>
+        </div>
       </div>
       {permissionRequest.blockReason && (
-        <div className="step-card-cwd">
+        <div className="step-card-cwd" style={{ padding: "0 20px 16px", color: "var(--on-surface-variant)" }}>
           {permissionRequest.blockReason
             .replace("BLOCK_REASON_", "")
             .replace(/_/g, " ")
@@ -120,21 +113,21 @@ export function FilePermissionCard({
         </div>
       )}
       {isWaiting && !responded && (
-        <div className="step-card-actions file-permission-actions">
+        <div className="file-permission-actions">
           <button
-            className="approve-btn file-permission-btn deny"
+            className="file-permission-btn deny"
             onClick={() => handleResponse(false, 0)}
           >
             Deny
           </button>
           <button
-            className="approve-btn file-permission-btn allow-once"
+            className="file-permission-btn allow-once"
             onClick={() => handleResponse(true, PERMISSION_SCOPE_ONCE)}
           >
             Allow Once
           </button>
           <button
-            className="approve-btn file-permission-btn allow-conversation"
+            className="file-permission-btn allow-conversation"
             onClick={() => handleResponse(true, PERMISSION_SCOPE_CONVERSATION)}
           >
             Allow This Conversation
@@ -163,7 +156,6 @@ export function CommandCard({ step, onCommandAction }: CommandCardProps) {
   if (!cmd) return null;
 
   const isWaiting = step.status === "CORTEX_STEP_STATUS_WAITING";
-  // When waiting for approval, show the proposed command; otherwise show executed
   const command = isWaiting
     ? (cmd.proposedCommandLine ?? cmd.commandLine ?? cmd.command ?? "")
     : (cmd.commandLine ?? cmd.command ?? "");
@@ -189,44 +181,51 @@ export function CommandCard({ step, onCommandAction }: CommandCardProps) {
     try {
       await onCommandAction(trajectoryId, stepIndex, approved);
     } catch {
-      // Request failed — restore buttons so user can retry
       setResponded(false);
     }
   };
 
   return (
     <div className={`chat-block step-card command-card ${statusClass}`}>
-      <button
+      <div
         className="step-card-header"
+        role="button"
+        tabIndex={0}
         onClick={() => output && setExpanded((v) => !v)}
-        title={output ? "Toggle output" : undefined}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { output && setExpanded((v) => !v); } }}
+        style={{ cursor: output ? "pointer" : "default", display: "block", width: "100%", padding: "12px 16px", background: "transparent", border: "none", textAlign: "left" }}
       >
-        <span className="step-card-icon">
-          <IconTerminal size={12} />
-        </span>
-        <code className="step-card-command">{command}</code>
-        {output && (
-          <span className={`step-card-chevron ${expanded ? "open" : ""}`}>
-            ▾
-          </span>
-        )}
-      </button>
-      {cwd && <div className="step-card-cwd">{cwd}</div>}
+        <div className="command-card-top">
+          <span className="step-card-cwd">{cwd || "terminal"}</span>
+          <div onClick={(e) => e.stopPropagation()}>
+            <StepCopyBtn text={output ? `$ ${command}\n${output}` : `$ ${command}`} />
+          </div>
+        </div>
+        <div className="command-card-main">
+          <span className="command-card-prompt">{">_"}</span>
+          <span className="step-card-command">{command}</span>
+          {output && (
+            <span className={`step-card-chevron ${expanded ? "open" : ""}`} style={{ marginLeft: "auto" }}>
+              <IconChevron />
+            </span>
+          )}
+        </div>
+      </div>
       {isWaiting && !responded && onCommandAction && (
-        <div className="step-card-actions command-action-bar">
+        <div className="command-action-bar">
           <span className="command-waiting-label">
             <span className="waiting-dot" />
             Waiting for approval
           </span>
           <div className="command-action-buttons">
             <button
-              className="approve-btn command-action-btn reject"
+              className="command-action-btn reject"
               onClick={() => handleAction(false)}
             >
               Reject
             </button>
             <button
-              className="approve-btn command-action-btn approve"
+              className="command-action-btn approve"
               onClick={() => handleAction(true)}
             >
               Approve
@@ -235,7 +234,6 @@ export function CommandCard({ step, onCommandAction }: CommandCardProps) {
         </div>
       )}
       {expanded && output && <pre className="step-card-output">{output}</pre>}
-      <StepCopyBtn text={output ? `$ ${command}\n${output}` : `$ ${command}`} />
     </div>
   );
 }
@@ -246,7 +244,6 @@ interface CodeActionCardProps {
   step: TrajectoryStep;
 }
 
-/** Diff line types from the LS proto */
 type DiffLineType =
   | "UNIFIED_DIFF_LINE_TYPE_UNCHANGED"
   | "UNIFIED_DIFF_LINE_TYPE_INSERT"
@@ -287,15 +284,16 @@ export function CodeActionCard({ step }: CodeActionCardProps) {
   const hasDiff = diffLines.length > 0;
 
   // Determine icon based on tool
-  let iconEl = <IconFileText size={12} />;
-  if (toolName === "write_to_file") iconEl = <IconFile size={12} />;
+  let iconEl = <IconEye size={16} />;
+  if (toolName === "write_to_file") iconEl = <IconPlus size={16} />;
   else if (
     toolName === "multi_replace_file_content" ||
     toolName === "replace_file_content"
   )
-    iconEl = <IconPencil size={12} />;
+    iconEl = <IconEdit size={16} />;
 
-  // Count additions/deletions
+  const isViewOnly = toolName !== "write_to_file" && toolName !== "multi_replace_file_content" && toolName !== "replace_file_content";
+
   const additions = diffLines.filter(
     (l) => l.type === "UNIFIED_DIFF_LINE_TYPE_INSERT",
   ).length;
@@ -304,32 +302,32 @@ export function CodeActionCard({ step }: CodeActionCardProps) {
   ).length;
 
   return (
-    <div className="chat-block step-card code-card">
+    <div className={`chat-block step-card code-card ${isViewOnly ? "view-card" : ""}`}>
       <button
         className="step-card-header"
         onClick={() => hasDiff && setExpanded((v) => !v)}
-        title={hasDiff ? "Toggle diff" : undefined}
+        style={{ cursor: hasDiff ? "pointer" : "default" }}
       >
         <span className="step-card-icon">{iconEl}</span>
-        <span className="diff-stat">
-          <span className="diff-stat-add">+{additions}</span>
-          <span className="diff-stat-del">-{deletions}</span>
-        </span>
+        {hasDiff && (
+          <span className="diff-stat">
+            <span className="diff-stat-add">+{additions}</span>
+            <span className="diff-stat-del">-{deletions}</span>
+          </span>
+        )}
+        {isViewOnly && !hasDiff && (
+          <span style={{ fontSize: 12, color: "var(--on-surface-variant)", opacity: 0.8 }}>Viewed</span>
+        )}
         {fileName && <code className="step-card-file">{fileName}</code>}
         <span className="step-card-desc">{description}</span>
         {hasDiff && (
           <span className={`step-card-chevron ${expanded ? "open" : ""}`}>
-            ▾
+            <IconChevron />
           </span>
         )}
       </button>
       {expanded && hasDiff && (
         <div className="step-card-diff">
-          {fileUri && (
-            <div className="diff-file-header">
-              {fileUri.replace("file://", "")}
-            </div>
-          )}
           <pre className="diff-content">
             {diffLines.map((line, i) => (
               <div key={i} className={`diff-line ${diffLineClass(line.type)}`}>
@@ -362,36 +360,36 @@ export function ErrorMessageCard({ step, onRetry }: ErrorMessageCardProps) {
   const hasDetail = !!detail || !!fullError;
 
   return (
-    <div className="chat-block step-card error-card cmd-fail">
+    <div className="chat-block step-card error-card">
       <button
         className="step-card-header"
         onClick={() => hasDetail && setExpanded((v) => !v)}
         title={hasDetail ? "Toggle error details" : undefined}
         style={{ cursor: hasDetail ? "pointer" : "default" }}
       >
-        <span className="step-card-icon" style={{ color: "rgb(var(--c-error))" }}>
-          <IconAlertTriangle size={12} />
+        <span className="step-card-icon">
+          <IconAlertTriangle size={16} />
         </span>
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-          <span className="error-card-title" style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, textAlign: "left" }}>
+          <span className="error-card-title">
             {mainMessage}
           </span>
           {!expanded && detail && detail !== mainMessage && (
-            <span className="error-card-detail" style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span className="error-card-detail">
               {detail}
             </span>
           )}
         </div>
         {hasDetail && (
-          <span className={`step-card-chevron ${expanded ? "open" : ""}`} style={{ alignSelf: "center" }}>
-            ▾
+          <span className={`step-card-chevron ${expanded ? "open" : ""}`}>
+            <IconChevron />
           </span>
         )}
       </button>
       {onRetry && (
-        <div className="step-card-actions file-permission-actions">
+        <div className="file-permission-actions">
           <button
-            className="approve-btn command-action-btn approve"
+            className="command-action-btn approve"
             onClick={(e) => {
               e.stopPropagation();
               onRetry(step.metadata?.sourceTrajectoryStepInfo?.stepIndex ?? 0);
@@ -402,7 +400,7 @@ export function ErrorMessageCard({ step, onRetry }: ErrorMessageCardProps) {
         </div>
       )}
       {expanded && (
-        <div className="step-card-output" style={{ background: "var(--bg-primary)", borderTop: "1px solid var(--border-subtle)", padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+        <div className="step-card-output">
           {detail && detail !== mainMessage && (
             <div style={{ marginBottom: "8px", fontWeight: 600 }}>
               {detail}
@@ -485,40 +483,42 @@ export function McpToolCard({ step, onCommandAction }: McpToolCardProps) {
     <div className={`chat-block step-card command-card ${statusClass}`}>
       <button
         className="step-card-header"
+        title="Toggle details"
         onClick={() => hasContent && setExpanded((v) => !v)}
-        title={hasContent ? "Toggle details" : undefined}
-        style={{ width: "100%", border: "none", background: "none", cursor: hasContent ? "pointer" : "default" }}
+        style={{ padding: "12px 16px", cursor: hasContent ? "pointer" : "default" }}
       >
         <span className="step-card-icon">
-          <IconLock size={12} />
+          <IconZap size={16} />
         </span>
-        <span className="step-card-desc" style={{ flex: 1, textAlign: "left" }}>
-          {isWaiting ? "MCP permission requested: " : "Called MCP tool: "}
-          <code className="step-card-command" style={{ background: "var(--bg-secondary)", padding: "2px 4px", borderRadius: "3px", fontFamily: "var(--font-mono)", fontSize: "11px" }}>
+        <div className="command-card-main" style={{ alignItems: "center" }}>
+          <span className="step-card-desc" style={{ flex: "none" }}>
+            {isWaiting ? "MCP permission requested: " : "Called MCP tool: "}
+          </span>
+          <code className="step-card-file" style={{ color: "var(--on-surface)" }}>
             {serverName}/{toolName}
           </code>
-        </span>
+        </div>
         {hasContent && (
           <span className={`step-card-chevron ${expanded ? "open" : ""}`}>
-            ▾
+            <IconChevron />
           </span>
         )}
       </button>
       {isWaiting && !responded && onCommandAction && (
-        <div className="step-card-actions command-action-bar">
+        <div className="command-action-bar" style={{ marginTop: 0 }}>
           <span className="command-waiting-label">
             <span className="waiting-dot" />
             Waiting for approval
           </span>
           <div className="command-action-buttons">
             <button
-              className="approve-btn command-action-btn reject"
+              className="command-action-btn reject"
               onClick={() => handleAction(false)}
             >
               Reject
             </button>
             <button
-              className="approve-btn command-action-btn approve"
+              className="command-action-btn approve"
               onClick={() => handleAction(true)}
             >
               Approve
@@ -527,7 +527,7 @@ export function McpToolCard({ step, onCommandAction }: McpToolCardProps) {
         </div>
       )}
       {expanded && hasContent && (
-        <div className="step-card-output" style={{ background: "var(--bg-primary)", borderTop: "1px solid var(--border-subtle)", padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>
+        <div className="step-card-output">
           {hasArgs && (
             <div style={{ marginBottom: result ? "10px" : "0px" }}>
               <div style={{ marginBottom: "4px", fontWeight: 600 }}>Arguments:</div>
@@ -549,4 +549,3 @@ export function McpToolCard({ step, onCommandAction }: McpToolCardProps) {
     </div>
   );
 }
-

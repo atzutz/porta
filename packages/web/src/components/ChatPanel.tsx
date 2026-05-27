@@ -296,40 +296,42 @@ const MessageBubble = memo(
       <div
         className={`message ${msg.role}${isUnconfirmed ? " unconfirmed" : ""}`}
       >
-        <div className="chat-block message-body">
-          {msg.thinking && (
-            <ThinkingBlock
-              thinking={msg.thinking}
-              duration={msg.thinkingDuration}
-            />
-          )}
-          {msg.media && msg.media.length > 0 && (
-            <MediaThumbs media={msg.media} onImageClick={onImageClick} />
-          )}
-          {msg.content && <MarkdownContent html={renderedContent} />}
-          {msg.content && (
-            <div className="msg-actions">
-              {msg.stepIndex >= 0 && (
-                <button
-                  className={`msg-action-btn ${isLocked ? "locked" : ""}`}
-                  onClick={() => {
-                    if (!isLocked) {
-                      onRevert(
-                        msg.stepIndex,
-                        msg.role === "user" ? msg.content : undefined,
-                      );
-                    }
-                  }}
-                  title="Revert"
-                  disabled={isLocked}
-                >
-                  <IconUndo size={13} />
-                </button>
-              )}
-              <CopyButton text={msg.content} />
-            </div>
-          )}
-        </div>
+        {msg.thinking && (
+          <ThinkingBlock
+            thinking={msg.thinking}
+            duration={msg.thinkingDuration}
+          />
+        )}
+        {(msg.content || (msg.media && msg.media.length > 0)) && (
+          <div className="chat-block message-body">
+            {msg.media && msg.media.length > 0 && (
+              <MediaThumbs media={msg.media} onImageClick={onImageClick} />
+            )}
+            {msg.content && <MarkdownContent html={renderedContent} />}
+            {msg.content && (
+              <div className="msg-actions">
+                {msg.stepIndex >= 0 && (
+                  <button
+                    className={`msg-action-btn ${isLocked ? "locked" : ""}`}
+                    onClick={() => {
+                      if (!isLocked) {
+                        onRevert(
+                          msg.stepIndex,
+                          msg.role === "user" ? msg.content : undefined,
+                        );
+                      }
+                    }}
+                    title="Revert"
+                    disabled={isLocked}
+                  >
+                    <IconUndo size={13} />
+                  </button>
+                )}
+                <CopyButton text={msg.content} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   },
@@ -449,14 +451,7 @@ export function ChatPanel({
     }
   }, [hardRefreshKey, hardRefresh]);
 
-  // Reset scroll state when switching chats
-  const prevCascadeRef = useRef(cascadeId);
-  useEffect(() => {
-    if (cascadeId !== prevCascadeRef.current) {
-      prevCascadeRef.current = cascadeId;
-      didInitialScroll.current = false;
-    }
-  }, [cascadeId]);
+
 
   const serverMessages = useMemo(() => stepsToMessages(rawSteps), [rawSteps]);
   const {
@@ -485,6 +480,15 @@ export function ChatPanel({
   const prevMsgCount = useRef(messages.length);
   const suppressScroll = useRef(false);
 
+  // Reset scroll state when switching chats inline during render
+  const prevCascadeRef = useRef(cascadeId);
+  if (cascadeId !== prevCascadeRef.current) {
+    prevCascadeRef.current = cascadeId;
+    didInitialScroll.current = false;
+    isNearBottom.current = true;
+    prevMsgCount.current = messages.length;
+  }
+
   // Auto-scroll: on first render (instant) and when new messages arrive while near bottom
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -502,7 +506,7 @@ export function ChatPanel({
       el.scrollTop = el.scrollHeight;
     }
     prevMsgCount.current = messages.length;
-  }, [messages.length]);
+  }, [cascadeId, messages.length]);
 
   // Lazy load older steps when user scrolls to top
   const loadOlderLock = useRef(false);
@@ -522,7 +526,8 @@ export function ChatPanel({
     // Trigger lazy load when near the top (only after initial scroll-to-bottom)
     if (
       didInitialScroll.current &&
-      el.scrollTop < 200 &&
+      el.scrollHeight > el.clientHeight &&
+      el.scrollTop < 100 &&
       hasMore &&
       !loadingOlder &&
       !loadOlderLock.current

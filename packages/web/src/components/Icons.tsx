@@ -247,3 +247,13 @@ export const IconGear = ({ size = 16, className }: IconProps) =>
 
 export const IconChevronLeft = ({ size = 16, className }: IconProps) =>
   d(size, className, "m15 18-6-6 6-6");
+
+export const IconAutoAwesome = ({ size = 16, className }: IconProps) =>
+  m(size, className, [
+    "M10 2l1.66 4.67L16 8.33l-4.34 1.66L10 14.67 8.34 10 4 8.33l4.34-1.66L10 2z",
+    "M20 12l.83 2.33L23 15.17l-2.17.83L20 18.33l-.83-2.33L17 15.17l2.17-.83L20 12z",
+    "M5 16l.83 2.33L8 19.17l-2.17.83L5 22.33l-.83-2.33L2 19.17l2.17-.83L5 16z"
+  ]);
+
+export const IconArrowDropDown = ({ size = 16, className }: IconProps) =>
+  d(size, className, "M7 10l5 5 5-5H7z");

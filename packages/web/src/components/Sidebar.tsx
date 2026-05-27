@@ -4,12 +4,16 @@ import { api } from "../api/client";
 import {
   IconPlus,
   IconSearch,
-  IconMenu,
-  IconMore,
   IconX,
   IconSpinner,
   IconGear,
+  IconFolder,
+  IconAutoAwesome,
+  IconArrowDropDown,
+  IconMore,
 } from "./Icons";
+import { GlassMenu } from "./ui/GlassMenu";
+import { GlassInput } from "./ui/GlassInput";
 
 interface Props {
   conversations: ConversationEntry[];
@@ -21,7 +25,7 @@ interface Props {
   loading: boolean;
   connected: boolean;
   isOpen: boolean;
-  onToggle: () => void;
+  onClose?: () => void;
 }
 
 interface WorkspaceGroup {
@@ -57,50 +61,7 @@ function isArchived(conv: ConversationEntry): boolean {
   return conv.summary.status === "CASCADE_RUN_STATUS_UNLOADED";
 }
 
-/** Three-dot context menu */
-function ContextMenu({
-  onDelete,
-  onClose,
-}: {
-  onDelete: () => void;
-  onClose: () => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
-
-  return (
-    <div ref={ref} className="context-menu">
-      <button
-        className="context-menu-item danger"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-          onClose();
-        }}
-      >
-        Delete
-      </button>
-    </div>
-  );
-}
-
-// ── Sidebar action items ──
-
-interface SidebarAction {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  active?: boolean;
-}
 
 export function Sidebar({
   conversations,
@@ -112,11 +73,10 @@ export function Sidebar({
   loading,
   connected,
   isOpen,
-  onToggle,
+  onClose,
 }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<
@@ -132,8 +92,6 @@ export function Sidebar({
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const closeMenu = useCallback(() => setMenuOpen(null), []);
-
   const groups = useMemo<WorkspaceGroup[]>(() => {
     const map = new Map<string, ConversationEntry[]>();
 
@@ -147,7 +105,6 @@ export function Sidebar({
     return Array.from(map.entries())
       .filter(([name]) => name !== "Others") // Hide workspace-less conversations
       .map(([name, convs]) => {
-        // Sort within group: running first, then by lastModifiedTime desc
         convs.sort((a, b) => {
           const aRunning = a.summary.status === "CASCADE_RUN_STATUS_RUNNING";
           const bRunning = b.summary.status === "CASCADE_RUN_STATUS_RUNNING";
@@ -192,20 +149,6 @@ export function Sidebar({
     setExpanded((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const actions: SidebarAction[] = [
-    { icon: <IconPlus size={14} />, label: "New Chat", onClick: onNew },
-    {
-      icon: <IconSearch size={14} />,
-      label: "Search",
-      onClick: () => {
-        setSearchOpen(true);
-        setTimeout(() => searchInputRef.current?.focus(), 50);
-      },
-    },
-    { icon: <IconGear size={14} />, label: "Settings", onClick: onSettings },
-  ];
-
-  // Debounced search
   const handleSearchInput = useCallback((value: string) => {
     setSearchQuery(value);
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -236,8 +179,6 @@ export function Sidebar({
     setSearching(false);
   }, []);
 
-  // Track when each conversation was last "seen" by the user.
-  // Stored as { convId: lastModifiedTime-at-moment-of-opening }.
   const [seenAt, setSeenAt] = useState<Record<string, string>>(() => {
     try {
       return JSON.parse(localStorage.getItem("porta:seenAt") ?? "{}");
@@ -261,7 +202,6 @@ export function Sidebar({
     [conversations],
   );
 
-  // Auto-mark active thread as seen when it receives updates
   useEffect(() => {
     if (activeId) markSeen(activeId);
   }, [activeId, conversations, markSeen]);
@@ -269,9 +209,6 @@ export function Sidebar({
   const renderItem = (conv: ConversationEntry) => {
     const isRunning = conv.summary.status === "CASCADE_RUN_STATUS_RUNNING";
     const lastSeen = seenAt[conv.id];
-    // Show update dot only if the thread was *previously opened* and
-    // has been modified since we last saw it.
-    // No seenAt record = never opened → no "update" concept → no dot.
     const hasUpdates =
       !isRunning &&
       conv.id !== activeId &&
@@ -282,116 +219,84 @@ export function Sidebar({
     return (
       <div
         key={conv.id}
-        className={`sidebar-item ${conv.id === activeId ? "active" : ""} ${isArchived(conv) ? "dimmed" : ""}`}
+        className={`sidebar-item ${conv.id === activeId ? "active" : ""}`}
         onClick={() => {
           markSeen(conv.id);
           onSelect(conv.id);
         }}
       >
-        <div className="sidebar-item-content">
-          <div className="sidebar-item-title">{conv.summary.summary}</div>
-          <div className="sidebar-item-meta">
-            {relativeTime(conv.summary.lastModifiedTime)}
-            {" · "}
-            {conv.summary.stepCount} steps
-          </div>
+        <div className="sidebar-item-title">{conv.summary.summary}</div>
+        <div className="sidebar-item-meta">
+          {relativeTime(conv.summary.lastModifiedTime)}
+          {" · "}
+          {conv.summary.stepCount} steps
         </div>
+        
         <div className="sidebar-item-right">
-          {isRunning && <IconSpinner size={13} className="item-indicator" />}
+          {isRunning && <IconSpinner size={12} className="item-indicator" />}
           {hasUpdates && <span className="item-dot" />}
-          <button
-            className="sidebar-item-menu-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen(menuOpen === conv.id ? null : conv.id);
-            }}
-            title="More options"
-          >
-            <IconMore size={13} />
-          </button>
-          {menuOpen === conv.id && (
-            <ContextMenu
-              onDelete={() => onDelete(conv.id)}
-              onClose={closeMenu}
-            />
-          )}
+          <GlassMenu
+            trigger={
+              <button className="sidebar-item-menu-btn" title="More options">
+                <IconMore size={12} />
+              </button>
+            }
+            items={[
+              {
+                label: "Delete",
+                danger: true,
+                onClick: () => onDelete(conv.id)
+              }
+            ]}
+          />
         </div>
       </div>
     );
   };
 
-  // ── Collapsed state: icon strip ──
-  if (!isOpen) {
-    return (
-      <aside className="sidebar sidebar-collapsed">
-        <div className="sidebar-collapsed-icons">
-          <button
-            className="sidebar-icon-btn"
-            onClick={onToggle}
-            title="Expand sidebar"
-          >
-            <IconMenu size={16} />
-          </button>
-          {actions.map((action, i) => (
-            <button
-              key={i}
-              className={`sidebar-icon-btn ${action.active ? "active" : ""}`}
-              onClick={action.onClick}
-              title={action.label}
-            >
-              {action.icon}
-            </button>
-          ))}
-        </div>
-        <div
-          className="sidebar-collapsed-bottom"
-          title={connected ? "Connected" : "Disconnected"}
-        />
-      </aside>
-    );
-  }
-
-  // ── Open state ──
   return (
-    <aside className="sidebar">
-      {/* Header: brand + collapse */}
-      <div className="sidebar-header">
-        <span
-          className="sidebar-brand"
-          title={connected ? "Connected" : "Disconnected"}
-        >
-          Porta
-        </span>
-        <button
-          className="sidebar-icon-btn"
-          onClick={onToggle}
-          title="Collapse sidebar"
-        >
-          <IconMenu size={16} />
+    <aside className={`sidebar ${isOpen ? "sidebar-open" : ""}`}>
+      {/* Header */}
+      <div className="sidebar-header" title={connected ? "Connected" : "Disconnected"}>
+        <div className="sidebar-logo">
+          <IconAutoAwesome size={18} />
+        </div>
+        <h1 className="sidebar-brand">Porta AI</h1>
+        {onClose && (
+          <button
+            className="sidebar-mobile-close-btn"
+            onClick={onClose}
+            title="Close menu"
+          >
+            <IconX size={16} />
+          </button>
+        )}
+      </div>
+
+      {/* Main Tabs */}
+      <div className="sidebar-main-tabs">
+        <button className="sidebar-tab" onClick={onNew}>
+          <IconPlus size={20} />
+          <span>New Chat</span>
+        </button>
+        <button className="sidebar-tab active">
+          <IconFolder size={20} />
+          <span>Projects</span>
+        </button>
+        <button className="sidebar-tab" onClick={() => {
+            setSearchOpen(true);
+            setTimeout(() => searchInputRef.current?.focus(), 50);
+        }}>
+          <IconSearch size={20} />
+          <span>Search</span>
         </button>
       </div>
 
-      {/* Action buttons */}
-      <div className="sidebar-actions">
-        {actions.map((action, i) => (
-          <button
-            key={i}
-            className={`sidebar-action-btn ${action.active ? "active" : ""}`}
-            onClick={action.onClick}
-          >
-            <span className="sidebar-action-icon">{action.icon}</span>
-            <span className="sidebar-action-label">{action.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Conversation list */}
-      <div className="sidebar-list">
+      {/* History */}
+      <div className="sidebar-history">
         {loading && conversations.length === 0 ? (
-          <div
-            style={{ display: "flex", justifyContent: "center", padding: 20 }}
-          >
-            <div className="loading-spinner" />
+          <div style={{ display: "flex", justifyContent: "center", padding: 20 }}>
+            <IconSpinner size={24} />
           </div>
         ) : (
           groups.map((group) => {
@@ -405,18 +310,16 @@ export function Sidebar({
 
             return (
               <div key={group.name} className="workspace-group">
-                <button
-                  className="workspace-group-header"
+                <div 
+                  className="workspace-group-header" 
                   onClick={() => toggleGroup(group.name)}
                 >
-                  <span
-                    className={`workspace-group-chevron ${isGroupCollapsed ? "collapsed" : ""}`}
-                  >
-                    ▾
-                  </span>
-                  <span className="workspace-group-name">{group.name}</span>
+                  <div className="workspace-group-title">
+                    <IconArrowDropDown size={16} className={`transition-transform duration-200 ${isGroupCollapsed ? "-rotate-90" : ""}`} />
+                    <span>{group.name}</span>
+                  </div>
                   <span className="workspace-group-count">{totalCount}</span>
-                </button>
+                </div>
 
                 {!isGroupCollapsed && (
                   <div className="workspace-group-items">
@@ -424,8 +327,9 @@ export function Sidebar({
 
                     {hiddenCount > 0 && (
                       <button
-                        className="see-all-btn"
+                        className="sidebar-tab"
                         onClick={() => toggleExpanded(group.name)}
+                        style={{marginTop: 4}}
                       >
                         {isExpanded ? "Show less" : `Show all (${totalCount})`}
                       </button>
@@ -436,6 +340,14 @@ export function Sidebar({
             );
           })
         )}
+      </div>
+
+      {/* Footer */}
+      <div className="sidebar-footer">
+        <button className="sidebar-tab" onClick={onSettings}>
+          <IconGear size={20} />
+          <span>Settings</span>
+        </button>
       </div>
 
       {/* Search Modal */}
@@ -450,7 +362,7 @@ export function Sidebar({
           >
             <div className="search-modal-header">
               <IconSearch size={16} className="search-modal-icon" />
-              <input
+              <GlassInput
                 ref={searchInputRef}
                 className="search-modal-input"
                 type="text"
@@ -466,7 +378,7 @@ export function Sidebar({
             <div className="search-modal-results">
               {searching ? (
                 <div className="search-modal-status">
-                  <div className="loading-spinner" />
+                  <IconSpinner size={24} />
                 </div>
               ) : searchResults === null ? (
                 <div className="search-modal-status">

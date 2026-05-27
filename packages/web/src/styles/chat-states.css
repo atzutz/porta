@@ -72,8 +72,6 @@
 
 .thinking-block {
   margin-bottom: 8px;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 8px;
 }
 
 .thinking-header {
@@ -85,6 +83,8 @@
   font-size: 12px;
   user-select: none;
   list-style: none;
+  padding: 8px 0;
+  width: 100%;
 }
 
 .thinking-header::-webkit-details-marker {
@@ -107,12 +107,11 @@ details[open] .thinking-chevron {
 }
 
 .thinking-content {
-  margin-top: 8px;
-  padding: 8px 10px;
-  background: rgb(var(--c-lift) / 0.02);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-  font-size: 12px;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-subtle);
+  font-size: 13px;
   color: var(--text-tertiary);
   line-height: 1.6;
   white-space: pre-wrap;

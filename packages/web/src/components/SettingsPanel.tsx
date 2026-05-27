@@ -13,6 +13,8 @@ import { IconChevronLeft, IconCheck } from "./Icons";
 import { api } from "../api/client";
 import type { ClientSettings } from "../types";
 import type { PlannerType } from "./ChatInput";
+import { GlassSelect } from "./ui/GlassSelect";
+import { GlassButton } from "./ui/GlassButton";
 
 interface ModelConfig {
   label: string;
@@ -130,23 +132,19 @@ export function SettingsPanel({ settings, onUpdate, onBack }: Props) {
                 per-message. Changes apply to new messages only.
               </span>
             </div>
-            <select
+            <GlassSelect
               className="settings-select"
               value={settings.defaultModel ?? "__none__"}
-              onChange={(e) => handleModelChange(e.target.value)}
-            >
-              <option value="__none__">Server default</option>
-              {fetchError && (
-                <option disabled>⚠ Failed to load models</option>
-              )}
-              {models.map((m) => (
-                <option key={m.modelOrAlias.model} value={m.modelOrAlias.model}>
-                  {m.label}
-                  {m.supportsImages ? " [Vision]" : ""}
-                  {m.isRecommended ? " (Recommended)" : ""}
-                </option>
-              ))}
-            </select>
+              onChange={handleModelChange}
+              options={[
+                { value: "__none__", label: "Server default" },
+                ...(fetchError ? [{ value: "error", label: "⚠ Failed to load models", disabled: true }] : []),
+                ...models.map((m) => ({
+                  value: m.modelOrAlias.model,
+                  label: `${m.label}${m.supportsImages ? " [Vision]" : ""}${m.isRecommended ? " (Recommended)" : ""}`
+                }))
+              ]}
+            />
           </div>
         </div>
 
@@ -161,14 +159,15 @@ export function SettingsPanel({ settings, onUpdate, onBack }: Props) {
                 multi-step structured approach for complex tasks.
               </span>
             </div>
-            <select
+            <GlassSelect
               className="settings-select"
               value={settings.defaultPlannerType}
-              onChange={(e) => handlePlannerChange(e.target.value)}
-            >
-              <option value="conversational">Fast</option>
-              <option value="planning">Plan</option>
-            </select>
+              onChange={handlePlannerChange}
+              options={[
+                { value: "conversational", label: "Fast" },
+                { value: "planning", label: "Plan" }
+              ]}
+            />
           </div>
         </div>
 
@@ -182,15 +181,16 @@ export function SettingsPanel({ settings, onUpdate, onBack }: Props) {
                 Controls whether terminal commands require your approval before running.
               </span>
             </div>
-            <select
+            <GlassSelect
               className="settings-select"
-              value={settings.cascadeAutoExecutionPolicy}
-              onChange={(e) => handleAutoExecutionChange(Number(e.target.value))}
-            >
-              <option value={1}>Require Review</option>
-              <option value={3}>Always Proceed</option>
-              <option value={4}>Proceed in Sandbox</option>
-            </select>
+              value={String(settings.cascadeAutoExecutionPolicy)}
+              onChange={(v) => handleAutoExecutionChange(Number(v))}
+              options={[
+                { value: "1", label: "Require Review" },
+                { value: "3", label: "Always Proceed" },
+                { value: "4", label: "Proceed in Sandbox" }
+              ]}
+            />
           </div>
         </div>
 
@@ -204,21 +204,21 @@ export function SettingsPanel({ settings, onUpdate, onBack }: Props) {
                 Controls whether Model Context Protocol (MCP) tool integrations (like Asana, GitHub) require approval.
               </span>
             </div>
-            <select
+            <GlassSelect
               className="settings-select"
               value={settings.cascadeMcpAutoApproval ? "true" : "false"}
-              onChange={(e) => handleMcpAutoApprovalChange(e.target.value === "true")}
-            >
-              <option value="false">Require Review</option>
-              <option value="true">Always Proceed</option>
-            </select>
+              onChange={(v) => handleMcpAutoApprovalChange(v === "true")}
+              options={[
+                { value: "false", label: "Require Review" },
+                { value: "true", label: "Always Proceed" }
+              ]}
+            />
           </div>
         </div>
 
-        {/* ── Reset ── */}
-        <button className="settings-reset-btn" onClick={handleReset}>
+        <GlassButton variant="danger" onClick={handleReset} style={{ width: "100%", marginTop: 24 }}>
           Reset all settings to defaults
-        </button>
+        </GlassButton>
       </div>
     </div>
   );

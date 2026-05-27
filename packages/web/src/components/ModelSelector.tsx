@@ -64,15 +64,15 @@ export function ModelSelector({ selectedModel, onSelect }: Props) {
   return (
     <div className="model-selector" ref={ref}>
       <button
-        className="model-selector-btn"
+        className="chat-input-pill"
         onClick={() => {
           if (fetchError || models.length === 0) fetchModels();
           setOpen((v) => !v);
         }}
         title="Select model"
       >
-        <span className="model-selector-label">{activeLabel}</span>
-        <span className="model-selector-caret">▾</span>
+        <span>{activeLabel}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
       </button>
       {open && (
         <div className="model-selector-dropdown">

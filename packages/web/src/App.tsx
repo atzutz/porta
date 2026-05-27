@@ -256,11 +256,12 @@ function ChatView() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      <div className="ambient-glow ambient-glow-top" />
+      <div className="ambient-glow ambient-glow-bottom" />
       <Sidebar
-        conversations={conversations}
         activeId={activeId}
+        conversations={conversations}
         onSelect={(id) => {
-          setOptimisticMessages([]);
           navigate(chatUrl(id));
           if (isMobile()) setSidebarOpen(false);
         }}
@@ -273,7 +274,7 @@ function ChatView() {
         loading={loading}
         connected={connected}
         isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen((v) => !v)}
+        onClose={() => setSidebarOpen(false)}
       />
       {/* Mobile backdrop: tap to close sidebar */}
       {sidebarOpen && (
