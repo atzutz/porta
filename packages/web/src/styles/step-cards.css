@@ -9,8 +9,8 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 4px 10px;
   border: none;
   background: transparent;
   color: inherit;
@@ -43,7 +43,7 @@
 
 .command-card-top {
   display: flex;
-  items-center: center;
+  align-items: center;
   justify-content: space-between;
   color: rgba(196, 197, 217, 0.5); /* on-surface-variant/50 */
   margin-bottom: 8px;
@@ -168,7 +168,7 @@
 
 .step-card-output {
   margin: 0;
-  padding: 12px 16px;
+  padding: 8px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -196,7 +196,7 @@
 .code-card .step-card-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(255, 255, 255, 0.02);
-  padding: 8px 16px;
+  padding: 6px 12px;
 }
 
 .code-card .step-card-icon {
@@ -279,7 +279,7 @@
 
 .diff-line {
   display: flex;
-  padding: 0 16px;
+  padding: 0 12px;
   min-height: 18px;
 }
 

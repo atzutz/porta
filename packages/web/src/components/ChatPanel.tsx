@@ -697,8 +697,9 @@ export function ChatPanel({
         })}
         {showTyping && (
           <div className="message assistant">
-            <div className="message-body">
-              <div className="typing-indicator">
+            <div className="message-body" style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "13px", color: "var(--primary)", fontStyle: "italic", fontWeight: 500 }}>Thinking</span>
+              <div className="typing-indicator" style={{ padding: 0 }}>
                 <span />
                 <span />
                 <span />

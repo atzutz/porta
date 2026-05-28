@@ -290,6 +290,10 @@ export function Sidebar({
           <IconSearch size={20} />
           <span>Search</span>
         </button>
+        <button className="sidebar-tab" onClick={onSettings}>
+          <IconGear size={20} />
+          <span>Settings</span>
+        </button>
       </div>
 
       {/* History */}
@@ -342,13 +346,7 @@ export function Sidebar({
         )}
       </div>
 
-      {/* Footer */}
-      <div className="sidebar-footer">
-        <button className="sidebar-tab" onClick={onSettings}>
-          <IconGear size={20} />
-          <span>Settings</span>
-        </button>
-      </div>
+
 
       {/* Search Modal */}
       {searchOpen && (

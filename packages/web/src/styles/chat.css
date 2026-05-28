@@ -72,8 +72,8 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: 24px; /* Reduced from 110px because input is static */
-  padding-top: 24px;
+  padding-bottom: 16px;
+  padding-top: 16px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -84,7 +84,7 @@
 .chat-area-inner {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
   max-width: 56rem;
   margin: 0 auto;
@@ -128,13 +128,13 @@
 .message {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   width: 100%;
 }
 
 .message.user {
   align-items: flex-end;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .message.assistant,
@@ -143,13 +143,14 @@
 }
 
 .message-body {
-  font-size: 15px;
-  line-height: 1.625;
+  font-size: 14px;
+  line-height: 1.5;
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
   max-width: 85%;
   width: fit-content;
+  position: relative;
 }
 
 .message-body:empty {
@@ -173,7 +174,7 @@
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255,255,255,0.05);
   box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.1);
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: var(--radius-2xl) var(--radius-2xl) var(--radius-2xl) 4px;
   color: var(--on-surface);
 }
@@ -214,14 +215,16 @@
 }
 
 .message-body p {
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
-.message-body > :first-child {
+.message-body > :first-child,
+.message-body > div > :first-child {
   margin-top: 0;
 }
 
-.message-body > :last-child {
+.message-body > :last-child,
+.message-body > div > :last-child {
   margin-bottom: 0;
 }
 
@@ -472,8 +475,8 @@
 .msg-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 6px;
   justify-content: flex-end;
 }
 
@@ -523,24 +526,34 @@
 
 .typing-indicator {
   display: flex;
-  gap: 4px;
-  padding: 4px 8px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
 }
 
 .typing-indicator span {
   width: 6px;
   height: 6px;
-  background: var(--on-surface-variant);
+  background: var(--primary);
   border-radius: 50%;
-  animation: bounce 1.4s infinite ease-in-out both;
+  opacity: 0.6;
+  animation: modern-pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+.typing-indicator span:nth-child(1) { animation-delay: 0s; }
+.typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
 
-@keyframes bounce {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
+@keyframes modern-pulse {
+  0%, 100% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-3px) scale(1.1);
+    opacity: 1;
+    box-shadow: 0 0 8px var(--primary);
+  }
 }
 
 /* ── Thinking block ── */
