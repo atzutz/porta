@@ -39,14 +39,26 @@ export const onRequest: any = async (context: any) => {
 
     const response = await fetch(newRequest);
 
-    // Clone the response so we can modify the headers
-    const finalResponse = new Response(response.body, response);
+    // Create a new mutable Headers object from the response headers
+    const newHeaders = new Headers(response.headers);
     
     // CRITICAL FIX: Cloudflare Access on the API backend might return a `Set-Cookie: CF_Authorization` 
     // because it processed the request. If we forward this cookie back to the browser, it OVERWRITES 
     // the user's frontend CF_Authorization cookie, immediately corrupting their frontend session!
     // This causes all subsequent frontend requests to be rejected by Cloudflare Access with a 302/403.
-    finalResponse.headers.delete("Set-Cookie");
+    newHeaders.delete("Set-Cookie");
+
+    // Decompressing / streaming headers must be deleted because Cloudflare's fetch
+    // automatically handles decompression, making these headers inaccurate and causing 502 errors.
+    newHeaders.delete("Content-Encoding");
+    newHeaders.delete("Content-Length");
+    newHeaders.delete("Transfer-Encoding");
+
+    const finalResponse = new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders,
+    });
     
     return finalResponse;
 };
